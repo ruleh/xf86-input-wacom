@@ -339,36 +339,6 @@ static void wcmSingleFingerTap(WacomDevicePtr priv)
 	}
 }
 
-/* Monitors for 1 finger touch and forces left button press or 1 finger
- * release and will remove left button press.
- *
- * This function relies on wcmGestureMode will only be zero if
- * WACOM_GESTURE_LAG_TIME has passed and still ony 1 finger on screen.
- */
-static void wcmSingleFingerPress(WacomDevicePtr priv)
-{
-	WacomCommonPtr common = priv->common;
-	WacomChannelPtr firstChannel = getContactNumber(common, 0);
-	WacomChannelPtr secondChannel = getContactNumber(common, 1);
-	Bool firstInProx = firstChannel && firstChannel->valid.states[0].proximity;
-	Bool secondInProx = secondChannel && secondChannel->valid.states[0].proximity;
-
-	DBG(10, priv, "\n");
-
-	if (!firstChannel)
-		return;
-
-	if (firstInProx && !secondInProx) {
-		firstChannel->valid.states[0].buttons |= 1;
-		common->wcmGestureMode = GESTURE_DRAG_MODE;
-	}
-	else {
-		firstChannel->valid.states[0].buttons &= ~1;
-		common->wcmGestureMode = GESTURE_NONE_MODE;
-	}
-}
-
-
 /**
  * Cancel any in-progress gesture, returning to GESTURE_NONE_MODE until new
  * fingers enter proximity.
@@ -551,7 +521,6 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	}
 ret:
 
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 16
 	/* Send multitouch data to X if appropriate */
 	if (!common->wcmGesture) {
 		if (common->wcmGestureMode == GESTURE_NONE_MODE) {
@@ -562,7 +531,6 @@ ret:
 		    common->wcmGestureMode == GESTURE_MULTITOUCH_MODE)
 			wcmFingerMultitouch(priv, touch_id);
 	}
-#endif
 
 	if ((common->wcmGestureMode == GESTURE_NONE_MODE || common->wcmGestureMode == GESTURE_DRAG_MODE) &&
 	    touch_id == 0)
