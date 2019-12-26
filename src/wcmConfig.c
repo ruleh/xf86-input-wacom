@@ -94,7 +94,6 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	common->wcmTool = tool;
 	tool->next = NULL;          /* next tool in list */
 	tool->device = pInfo;
-	/* tool->typeid is set once we know the type - see wcmSetType */
 
 	/* timers */
 	priv->serial_timer = TimerSet(NULL, 0, 0, NULL, NULL);
@@ -151,8 +150,6 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 
 	if (!priv->tool)
 		return 0;
-
-	priv->tool->typeid = DEVICE_ID(priv->flags); /* tool type (stylus/touch/eraser/cursor/pad) */
 
 	return 1;
 
@@ -321,9 +318,6 @@ static Bool wcmIsSiblingDevice(InputInfoPtr a, InputInfoPtr b, Bool logical_only
 		return FALSE;
 
 	if (privA == privB)
-		return FALSE;
-
-	if (DEVICE_ID(privA->flags) == DEVICE_ID(privB->flags))
 		return FALSE;
 
 	if (!strcmp(privA->common->device_path, privB->common->device_path))

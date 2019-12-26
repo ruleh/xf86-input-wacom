@@ -679,13 +679,13 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	{
 		WacomToolPtr toollist = NULL;
 		for(toollist = common->wcmTool; toollist; toollist = toollist->next)
-			if(tool->typeid == toollist->typeid && tool->serial == toollist->serial)
+			if(tool->serial == toollist->serial)
 				break;
 
 		if(toollist) /* Already have a tool with the same type/serial */
 		{
-			xf86Msg(X_ERROR, "%s: already have a tool with type/serial %d/%d.\n",
-					pInfo->name, tool->typeid, tool->serial);
+			xf86Msg(X_ERROR, "%s: already have a tool with serial %d.\n",
+					pInfo->name, tool->serial);
 			goto error;
 		} else /* No match on existing tool/serial, add tool to the end of the list */
 		{

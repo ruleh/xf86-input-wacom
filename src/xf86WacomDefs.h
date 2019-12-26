@@ -458,7 +458,6 @@ struct _WacomTool
 {
 	WacomToolPtr next; /* Next tool in list */
 
-	int typeid; /* Tool type */
 	unsigned int serial; /* Serial id, 0 == no serial id */
 	Bool enabled;
 	char *name;
