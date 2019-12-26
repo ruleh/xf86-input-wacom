@@ -468,7 +468,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 #ifdef DEBUG
 	int is_button = !!(ds->buttons);
 #endif
-	int id = ds->device_id;
 	unsigned int serial = ds->serial_num;
 	int x = ds->x;
 	int y = ds->y;
@@ -487,7 +486,7 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		return;
 	}
 
-	wcmUpdateSerial(pInfo, serial, id);
+	wcmUpdateSerial(pInfo, serial);
 
 	/* don't move the cursor when going out-prox */
 	if (!ds->proximity)
@@ -517,11 +516,11 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	v6 = ds->abswheel2;
 
 	DBG(6, priv, "%s prox=%d\tx=%d"
-		"\ty=%d\tz=%d\tv3=%d\tv4=%d\tv5=%d\tv6=%d\tid=%d"
+		"\ty=%d\tz=%d\tv3=%d\tv4=%d\tv5=%d\tv6=%d"
 		"\tserial=%u\tbutton=%s\tbuttons=%d\n",
 		is_absolute(pInfo) ? "abs" : "rel",
 		ds->proximity,
-		x, y, z, v3, v4, v5, v6, id, serial,
+		x, y, z, v3, v4, v5, v6, serial,
 		is_button ? "true" : "false", ds->buttons);
 
 	/* when entering prox, replace the zeroed-out oldState with a copy of
@@ -554,8 +553,7 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	{
 		priv->oldState = OUTPROX_STATE;
 		priv->oldState.serial_num = serial;
-		priv->oldState.device_id = id;
-		wcmUpdateSerial(pInfo, 0, 0);
+		wcmUpdateSerial(pInfo, 0);
 	}
 }
 
@@ -666,31 +664,6 @@ static WacomToolPtr findTool(const WacomCommonPtr common,
 	return tool;
 }
 
-/**
- * Check if the given device should grab control of the pointer in
- * preference to whatever tool currently has access.
- *
- * @param pInfo  The device to check for access
- * @param ds     The current state of the device
- * @returns      'TRUE' if control of the pointer should be granted, FALSE otherwise
- */
-static Bool check_arbitrated_control(InputInfoPtr pInfo, WacomDeviceStatePtr ds)
-{
-	WacomDevicePtr active = WACOM_DRIVER.active;
-	WacomDevicePtr priv = pInfo->private;
-
-	if (active == NULL || active->oldState.device_id == ds->device_id) {
-		DBG(11, priv, "Event from active device; maintaining pointer control.\n");
-		return TRUE;
-	}
-	else {
-		/* Non-touch input has priority over touch in general */
-		DBG(6, priv, "Event from non-active %s device; %s pointer control.\n",
-		    "touch", "not yielding");
-		return FALSE;
-	}
-}
-
 /*****************************************************************************
  * wcmEvent -
  *   Handles suppression, transformation, filtering, and event dispatch.
@@ -717,11 +690,10 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	ds = *pState;
 
 	DBG(10, common,
-		"c=%d i=%d s=%u x=%d y=%d b=%d "
+		"c=%d s=%u x=%d y=%d b=%d "
 		"p=%d rz=%d tx=%d ty=%d aw=%d aw2=%d rw=%d "
 		"t=%d px=%d st=%d cs=%d \n",
 		channel,
-		ds.device_id,
 		ds.serial_num,
 		ds.x, ds.y, ds.buttons,
 		ds.pressure, ds.rotation, ds.tiltx,
@@ -763,19 +735,14 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	if (pChannel->nSamples < common->wcmRawSample) ++pChannel->nSamples;
 
 	/* arbitrate pointer control */
-	if (check_arbitrated_control(pInfo, &ds)) {
-		if (WACOM_DRIVER.active != NULL && priv != WACOM_DRIVER.active) {
-			wcmSoftOutEvent(WACOM_DRIVER.active->pInfo);
-			wcmCancelGesture(WACOM_DRIVER.active->pInfo);
-		}
-		if (ds.proximity)
-			WACOM_DRIVER.active = priv;
-		else
-			WACOM_DRIVER.active = NULL;
+	if (WACOM_DRIVER.active != NULL && priv != WACOM_DRIVER.active) {
+		wcmSoftOutEvent(WACOM_DRIVER.active->pInfo);
+		wcmCancelGesture(WACOM_DRIVER.active->pInfo);
 	}
-	else {
-		return;
-	}
+	if (ds.proximity)
+		WACOM_DRIVER.active = priv;
+	else
+		WACOM_DRIVER.active = NULL;
 
 	if (common->wcmTouch)
 	{
@@ -1029,7 +996,6 @@ void wcmSoftOutEvent(InputInfoPtr pInfo)
 	WacomDeviceState out = OUTPROX_STATE;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 
-	out.device_id = TOUCH_DEVICE_ID;
 	DBG(2, priv->common, "send a soft prox-out\n");
 	wcmSendEvents(pInfo, &out);
 }

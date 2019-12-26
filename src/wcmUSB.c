@@ -847,7 +847,6 @@ static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
 		case ABS_MT_TRACKING_ID:
 			ds->proximity = (event->value != -1);
 			/* set this here as type for this channel doesn't get set in usbDispatchEvent() */
-			ds->device_id = TOUCH_DEVICE_ID;
 			ds->sample = (int)GetTimeInMillis();
 			break;
 
@@ -893,7 +892,6 @@ static void usbParseKeyEvent(WacomCommonPtr common,
 			DBG(6, common,
 			    "USB Touch detected %x (value=%d)\n",
 			    event->code, event->value);
-			ds->device_id = TOUCH_DEVICE_ID;
 			ds->proximity = event->value;
 			/* time stamp for 2FGT gesture events */
 			if ((ds->proximity && !dslast->proximity) ||
@@ -905,7 +903,6 @@ static void usbParseKeyEvent(WacomCommonPtr common,
 			DBG(6, common,
 			    "USB Touch second finger detected %x (value=%d)\n",
 			    event->code, event->value);
-			ds->device_id = TOUCH_DEVICE_ID;
 			ds->proximity = event->value;
 			/* time stamp for 2GT gesture events */
 			if ((ds->proximity && !dslast->proximity) ||

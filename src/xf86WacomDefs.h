@@ -134,7 +134,6 @@ struct _WacomModel
 
 /* these device IDs are reported through ABS_MISC for Protocol 4 devices */
 #define DEVICE_ID(flags) ((flags) & 0xff)
-#define TOUCH_DEVICE_ID		0x03
 
 /* Each tablet may have one or more of the following
  * features */
@@ -191,7 +190,6 @@ struct _WacomModel
 struct _WacomDeviceState
 {
 	InputInfoPtr pInfo;
-	int device_id;		/* tool id reported from the physical device */
 	unsigned int serial_num;
 	int x;
 	int y;
@@ -238,7 +236,6 @@ struct _WacomDeviceRec
 	int maxY;	        /* tool physical maxY in device coordinates */
 	unsigned int serial;	/* device serial number this device takes (if 0, any serial is ok) */
 	unsigned int cur_serial; /* current serial in prox */
-	int cur_device_id;	/* current device ID in prox */
 
 	/* button mapping information
 	 *

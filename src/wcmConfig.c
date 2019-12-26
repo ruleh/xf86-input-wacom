@@ -149,9 +149,6 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 	} else
 		goto invalid;
 
-	/* Set the device id of the "last seen" device on this tool */
-	priv->oldState.device_id = TOUCH_DEVICE_ID;
-
 	if (!priv->tool)
 		return 0;
 
