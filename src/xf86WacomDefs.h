@@ -28,13 +28,6 @@
 #include <linux/input.h>
 #define MAX_USB_EVENTS 32
 
-/* vendor IDs on the kernel device */
-#define WACOM_VENDOR_ID 0x056a
-#define WALTOP_VENDOR_ID 0x172F
-#define NTRIG_VENDOR_ID 0x1b96
-#define HANWANG_VENDOR_ID 0x0b57
-#define LENOVO_VENDOR_ID 0x17ef
-
 #define DEFAULT_SUPPRESS 2      /* default suppress */
 #define MAX_SUPPRESS 100        /* max value of suppress */
 #define BUFFER_SIZE 256         /* size of reception buffer */

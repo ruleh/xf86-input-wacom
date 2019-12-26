@@ -341,36 +341,6 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 	return TRUE;
 }
 
-Bool wcmIsWacomDevice (char* fname)
-{
-	int fd = -1;
-	struct input_id id;
-
-	SYSCALL(fd = open(fname, O_RDONLY));
-	if (fd < 0)
-		return FALSE;
-
-	if (ioctl(fd, EVIOCGID, &id) < 0)
-	{
-		SYSCALL(close(fd));
-		return FALSE;
-	}
-
-	SYSCALL(close(fd));
-
-	switch(id.vendor)
-	{
-		case WACOM_VENDOR_ID:
-		case WALTOP_VENDOR_ID:
-		case HANWANG_VENDOR_ID:
-		case LENOVO_VENDOR_ID:
-			return TRUE;
-		default:
-			break;
-	}
-	return FALSE;
-}
-
 /*****************************************************************************
  * wcmEventAutoDevProbe -- Probe for right input device
  ****************************************************************************/
@@ -388,19 +358,7 @@ char *wcmEventAutoDevProbe (InputInfoPtr pInfo)
 		for (i = 0; i < EVDEV_MINORS; i++) 
 		{
 			char fname[64];
-			Bool is_wacom;
-
 			sprintf(fname, DEV_INPUT_EVENT, i);
-			is_wacom = wcmIsWacomDevice(fname);
-			if (is_wacom) 
-			{
-				xf86Msg(X_PROBED, "%s: probed device is %s (waited %d msec)\n",
-					pInfo->name, fname, wait);
-				xf86ReplaceStrOption(pInfo->options, "Device", fname);
-
-				/* this assumes there is only one Wacom device on the system */
-				return xf86CheckStrOption(pInfo->options, "Device", NULL);
-			}
 		}
 		wait += 100;
 		xf86Msg(X_ERROR, "%s: waiting 100 msec (total %dms) for device to become ready\n", pInfo->name, wait);
