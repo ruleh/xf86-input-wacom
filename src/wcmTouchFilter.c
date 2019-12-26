@@ -318,10 +318,6 @@ static void wcmSingleFingerTap(WacomDevicePtr priv)
 
 	DBG(10, priv, "\n");
 
-	/* This gesture is only valid on touchpads. */
-	if (TabletHasFeature(priv->common, WCM_LCD))
-		return;
-
 	if (!ds[0].proximity && dsLast[0].proximity && !ds[1].proximity)
 	{
 		/* Single Tap must have lasted less than wcmTapTime
@@ -561,7 +557,7 @@ ret:
 	if (!common->wcmGesture) {
 		if (common->wcmGestureMode == GESTURE_NONE_MODE) {
 			if (TabletHasFeature(common, WCM_LCD))
-				common->wcmGestureMode = GESTURE_MULTITOUCH_MODE;
+				common->wcmGestureMode = GESTURE_LAG_MODE;
 			else if (ds[1].proximity)
 				common->wcmGestureMode = GESTURE_LAG_MODE;
 		}
@@ -576,7 +572,6 @@ ret:
 	    touch_id == 0)
 	{
 		wcmSingleFingerTap(priv);
-		wcmSingleFingerPress(priv);
 	}
 }
 
