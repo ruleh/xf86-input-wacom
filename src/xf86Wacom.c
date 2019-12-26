@@ -213,14 +213,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min = 0;
 	max = 1;
 
-	if (IsPen(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_TILT_X),
-		min_res = max_res = res = round(TILT_RES);
-		min = TILT_MIN;
-		max = TILT_MAX;
-	}
-	else if (IsCursor(priv))
+	if (IsCursor(priv))
 	{
 		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_RZ);
 		min = MIN_ROTATION;
@@ -238,14 +231,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min = 0;
 	max = 1;
 
-	if (IsPen(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_TILT_Y);
-		min_res = max_res = res = round(TILT_RES);
-		min = TILT_MIN;
-		max = TILT_MAX;
-	}
-	else if (IsCursor(priv))
+	if (IsCursor(priv))
 	{
 		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_THROTTLE);
 		min = -1023;
@@ -262,13 +248,6 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min_res = max_res = res = 1;
 	min = 0;
 	max = 1;
-
-	if (IsStylus(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_WHEEL);
-		max = MAX_ROTATION_RANGE + MIN_ROTATION - 1;
-		min = MIN_ROTATION;
-	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 

@@ -188,11 +188,7 @@ invalid:
 
 int wcmGetPhyDeviceID(WacomDevicePtr priv)
 {
-	if (IsStylus(priv))
-		return STYLUS_DEVICE_ID;
-	else if (IsEraser(priv))
-		return ERASER_DEVICE_ID;
-	else if (IsCursor(priv))
+	if (IsCursor(priv))
 		return CURSOR_DEVICE_ID;
 	else if (IsTouch(priv))
 		return TOUCH_DEVICE_ID;
@@ -323,7 +319,7 @@ static void wcmSplitName(char* devicename, char *basename, char *subdevice, char
 
 		while (b)
 		{
-			if (!strcmp(b, " Pen") || !strcmp(b, " Finger") ||
+			if (!strcmp(b, " Finger") ||
 			    !strcmp(b, " Pad") || !strcmp(b, " Touch"))
 			{
 				*b = '\0';

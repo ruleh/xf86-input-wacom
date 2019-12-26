@@ -171,12 +171,9 @@ struct _WacomModel
 #define SCROLLMODE_FLAG		0x00001000
 
 #define IsCursor(priv) (DEVICE_ID((priv)->flags) == CURSOR_ID)
-#define IsStylus(priv) (DEVICE_ID((priv)->flags) == STYLUS_ID)
 #define IsTouch(priv)  (DEVICE_ID((priv)->flags) == TOUCH_ID)
-#define IsEraser(priv) (DEVICE_ID((priv)->flags) == ERASER_ID)
 #define IsPad(priv)    (DEVICE_ID((priv)->flags) == PAD_ID)
-#define IsPen(priv)    (IsStylus(priv) || IsEraser(priv))
-#define IsTablet(priv) (IsPen(priv) || IsCursor(priv))
+#define IsTablet(priv) (IsCursor(priv))
 
 #define IsUSBDevice(common) ((common)->wcmDevCls == &gWacomUSBDevice)
 

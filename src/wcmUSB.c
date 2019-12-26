@@ -33,7 +33,6 @@
 typedef struct {
 	int wcmLastToolSerial;
 	int wcmDeviceType;
-	Bool wcmPenTouch;
 	Bool wcmUseMT;
 	int wcmMTChannel;
 	int wcmEventCnt;
@@ -213,7 +212,6 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, size_t id_len, float *versi
 	/* nbuttons tracks maximum buttons on all tools (stylus/mouse).
 	 *
 	 * Mouse support left, middle, right, side, and extra side button.
-	 * Stylus support tip and 3 stylus buttons.
 	 */
 	if (ISBITSET (common->wcmKeys, BTN_TOOL_MOUSE))
 		usbdata->nbuttons = WCM_USB_MAX_MOUSE_BUTTONS;
@@ -493,10 +491,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 
 		if (!ioctl(pInfo->fd, EVIOCGABS(ABS_MT_SLOT), &absinfo))
 			common->wcmMaxContacts = absinfo.maximum + 1;
-
-		/* pen and MT on the same logical port */
-		if (ISBITSET(common->wcmKeys, BTN_TOOL_PEN))
-			private->wcmPenTouch = TRUE;
 	}
 
 	if (ioctl(pInfo->fd, EVIOCGBIT(EV_SW, sizeof(sw)), sw) < 0)
@@ -1095,34 +1089,6 @@ static void usbParseKeyEvent(WacomCommonPtr common,
 
 	if (change)
 		return;
-
-	/* Rest back to non-default value for next switch statement */
-	change = 1;
-
-	/* From this point on, all BTN_* will be real button presses.
-	 * Stylus buttons always go with *ds.  Handle remaining
-	 * cases upon return.
-	 */
-	switch (event->code)
-	{
-		case BTN_STYLUS:
-			ds->buttons = mod_buttons(ds->buttons, 1, event->value);
-			break;
-
-		case BTN_STYLUS2:
-			ds->buttons = mod_buttons(ds->buttons, 2, event->value);
-			break;
-
-		case BTN_STYLUS3:
-			ds->buttons = mod_buttons(ds->buttons, 3, event->value);
-			break;
-
-		default:
-			change = 0;
-	}
-
-	ds->time = (int)GetTimeInMillis();
-	channel->dirty |= change;
 }
 
 /* Handle all button presses except for stylus buttons */
@@ -1357,23 +1323,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	                                         private->wcmEvents,
 	                                         private->wcmEventCnt,
 	                                         dslast.device_type);
-
-	if (private->wcmPenTouch)
-	{
-		/* We get both tablet tool and touch data from the kernel when
-		 * both tools are in/down. So, if we were (hence the need of dslast)
-		 * processing tablet tool events, we should ignore touch events.
-		 *
-		 * MT events will be posted to the userland when XInput 2.1
-		 * is ready.
-		 */
-		if ((private->wcmDeviceType == TOUCH_ID) &&
-				usbIsTabletToolInProx(dslast.device_type, dslast.proximity))
-		{
-			private->wcmEventCnt = 0;
-			return;
-		}
-	}
 
 	private->wcmLastToolSerial = protocol5Serial(private->wcmDeviceType, private->wcmLastToolSerial);
 	channel = usbChooseChannel(common, private->wcmDeviceType, private->wcmLastToolSerial);

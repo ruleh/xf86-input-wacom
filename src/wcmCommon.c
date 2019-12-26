@@ -156,25 +156,6 @@ static void wcmSendButtons(InputInfoPtr pInfo, const WacomDeviceState* ds, int b
 
 	first_button = 0; /* zero-indexed because of mask */
 
-	/* Tablet PC buttons only apply to penabled devices */
-	if (common->wcmTPCButton && IsStylus(priv))
-	{
-		first_button = (buttons <= 1) ? 0 : 1;
-
-		/* tip released? release all buttons */
-		if ((buttons & 1) == 0)
-			buttons = 0;
-		/* tip pressed? send all other button presses */
-		else if ((buttons & 1) != (priv->oldState.buttons & 1))
-			priv->oldState.buttons = 0;
-		/* other button changed while tip is still down? release tip */
-		else if ((buttons & 1) && (buttons != priv->oldState.buttons))
-		{
-			buttons &= ~1;
-			first_button = 0;
-		}
-	}
-
 	for (button = first_button; button < WCM_MAX_BUTTONS; button++)
 	{
 		mask = 1u << button;
@@ -664,8 +645,6 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 	} /* not in proximity */
 }
 
-#define IsArtPen(ds)    (ds->device_id == 0x885 || ds->device_id == 0x804 || ds->device_id == 0x100804)
-
 /*****************************************************************************
  * wcmSendEvents --
  *   Send events according to the device state.
@@ -739,14 +718,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 
 	v5 = ds->abswheel;
 	v6 = ds->abswheel2;
-	if (IsStylus(priv) && !IsArtPen(ds))
-	{
-		/* Normalize abswheel airbrush data to Art Pen rotation range.
-		 * We do not normalize Art Pen. They are already at the range.
-		 */
-		v5 = ds->abswheel * MAX_ROTATION_RANGE/
-				(double)MAX_ABS_WHEEL + MIN_ROTATION;
-	}
 
 	DBG(6, priv, "%s prox=%d\tx=%d"
 		"\ty=%d\tz=%d\tv3=%d\tv4=%d\tv5=%d\tv6=%d\tid=%d"
@@ -1238,7 +1209,7 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 		return;
 	}
 
-	if ((IsPen(priv) || IsTouch(priv)) && common->wcmMaxZ)
+	if (IsTouch(priv) && common->wcmMaxZ)
 	{
 		int prev_min_pressure = priv->oldState.proximity ? priv->minPressure : 0;
 
@@ -1251,40 +1222,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 		priv->minPressure = rebasePressure(priv, &filtered);
 
 		filtered.pressure = normalizePressure(priv, filtered.pressure);
-		if (IsPen(priv)) {
-			filtered.buttons = setPressureButton(priv,
-							     filtered.buttons,
-							     filtered.pressure);
-
-			/* Here we run some heuristics to avoid losing button events if the
-			 * pen gets pushed onto the tablet so quickly that the first pressure
-			 * event read is non-zero and is thus interpreted as a pressure bias */
-			if (filtered.buttons & PRESSURE_BUTTON) {
-				/* If we triggered 'normally' reset max pressure to
-				 * avoid to trigger again while this device is in proximity */
-				priv->maxRawPressure = 0;
-			} else if (priv->maxRawPressure) {
-				int norm_max_pressure;
-
-				/* If we haven't triggered normally we record the maximal pressure
-				 * and see if this would have triggered with a lowered bias. */
-				if (priv->maxRawPressure < raw_pressure)
-					priv->maxRawPressure = raw_pressure;
-				norm_max_pressure = normalizePressure(priv, priv->maxRawPressure);
-				filtered.buttons = setPressureButton(priv, filtered.buttons,
-								     norm_max_pressure);
-
-				/* If minPressure is not decrementing any more or a button
-				 * press has been generated or minPressure has just become zero
-				 * reset maxRawPressure to avoid that worn devices
-				 * won't report a button release until going out of proximity */
-				if ((filtered.buttons & PRESSURE_BUTTON &&
-				     priv->minPressure == prev_min_pressure) ||
-				    !priv->minPressure)
-					priv->maxRawPressure = 0;
-
-			}
-		}
 		filtered.pressure = applyPressureCurve(priv,&filtered);
 	}
 
@@ -1407,16 +1344,6 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 	if (model->GetRanges && (model->GetRanges(pInfo) != Success))
 		return !Success;
 	
-	/* Default threshold value if not set */
-	if (common->wcmThreshold <= 0 && IsPen(priv))
-	{
-		/* Threshold for counting pressure as a button */
-		common->wcmThreshold = priv->maxCurve * DEFAULT_THRESHOLD;
-
-		xf86Msg(X_PROBED, "%s: using pressure threshold of %d for button 1\n",
-			pInfo->name, common->wcmThreshold);
-	}
-
 	/* Calculate default panscroll threshold if not set */
 	xf86Msg(X_CONFIG, "%s: panscroll is %d\n", pInfo->name, common->wcmPanscrollThreshold);
 	if (common->wcmPanscrollThreshold < 1) {
@@ -1427,15 +1354,7 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 	}
 	xf86Msg(X_CONFIG, "%s: panscroll modified to %d\n", pInfo->name, common->wcmPanscrollThreshold);
 
-	/* output tablet state as probed */
-	if (IsPen(priv))
-		xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
-			"resX=%d resY=%d  tilt=%s\n",
-			pInfo->name,
-			common->wcmMaxX, common->wcmMaxY, common->wcmMaxZ,
-			common->wcmResolX, common->wcmResolY,
-			HANDLE_TILT(common) ? "enabled" : "disabled");
-	else if (IsTouch(priv))
+	if (IsTouch(priv))
 		xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
 			"resX=%d resY=%d \n",
 			pInfo->name,
