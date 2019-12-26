@@ -357,7 +357,6 @@ struct _WacomDeviceClass
 };
 
 extern WacomDeviceClass gWacomUSBDevice;
-extern WacomDeviceClass gWacomISDV4Device;
 
 /******************************************************************************
  * WacomCommonRec
@@ -377,12 +376,6 @@ typedef struct {
 	int wcmGestureUsed;	       /* retain used gesture count within one in-prox event */
 	int wcmTapTime;	   	       /* minimum time between taps for a right click */
 } WacomGesturesParameters;
-
-enum WacomProtocol {
-	WCM_PROTOCOL_GENERIC,
-	WCM_PROTOCOL_4,
-	WCM_PROTOCOL_5
-};
 
 struct _WacomDriverRec
 {
@@ -446,7 +439,6 @@ struct _WacomCommonRec
 
 	WacomDevicePtr wcmDevices;   /* list of devices sharing same port */
 	int wcmPktLength;            /* length of a packet */
-	int wcmProtocolLevel;        /* Wacom Protocol used */
 	float wcmVersion;            /* ROM version */
 	int wcmRotate;               /* rotate screen (for TabletPC) */
 	int wcmThreshold;            /* Threshold for button pressure */

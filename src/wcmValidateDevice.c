@@ -159,14 +159,6 @@ Bool wcmIsAValidType(InputInfoPtr pInfo, const char* type)
 				if (ISBITSET (common->wcmKeys, wcmType[j].tool[k]))
 				{
 					ret = TRUE;
-
-					/* non GENERIC devices use BTN_TOOL_FINGER for pad */
-					if (common->wcmProtocolLevel != WCM_PROTOCOL_GENERIC)
-					{
-						if (!strcmp(type, "touch") &&
-							wcmType[j].tool[k] == BTN_TOOL_FINGER)
-						    ret = FALSE;
-					}
 				}
 				else if (!dsource || !strlen(dsource)) /* an user defined type */
 				{
@@ -378,26 +370,12 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 		TabletSetFeature(priv->common, WCM_PAD);
 	}
 
-	/* This handles both protocol 4 and 5 meanings of wcmKeys */
-	if (common->wcmProtocolLevel == WCM_PROTOCOL_4)
-	{
-		/* TRIPLETAP means 2 finger touch */
-		/* DOUBLETAP without TRIPLETAP means 1 finger touch */
-		if (ISBITSET(common->wcmKeys, BTN_TOOL_TRIPLETAP))
-			TabletSetFeature(priv->common, WCM_2FGT);
-		else if (ISBITSET(common->wcmKeys, BTN_TOOL_DOUBLETAP))
-			TabletSetFeature(priv->common, WCM_1FGT);
-	}
-
-	if (common->wcmProtocolLevel == WCM_PROTOCOL_GENERIC)
-	{
-		/* DOUBLETAP means 2 finger touch */
-		/* FINGER without DOUBLETAP means 1 finger touch */
-		if (ISBITSET(common->wcmKeys, BTN_TOOL_DOUBLETAP))
-			TabletSetFeature(priv->common, WCM_2FGT);
-		else if (ISBITSET(common->wcmKeys, BTN_TOOL_FINGER))
-			TabletSetFeature(priv->common, WCM_1FGT);
-	}
+	/* DOUBLETAP means 2 finger touch */
+	/* FINGER without DOUBLETAP means 1 finger touch */
+	if (ISBITSET(common->wcmKeys, BTN_TOOL_DOUBLETAP))
+		TabletSetFeature(priv->common, WCM_2FGT);
+	else if (ISBITSET(common->wcmKeys, BTN_TOOL_FINGER))
+		TabletSetFeature(priv->common, WCM_1FGT);
 
 	return ret;
 }
@@ -1106,6 +1084,7 @@ Bool wcmPostInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 			xf86SetIntOption(pInfo->options, "ScrollDistance",
 					 scroll_distance);
 
+		// TODO: add this as option
 		common->wcmGestureParameters.wcmMaxScrollFingerSpread =
 			common->wcmMaxTouchX *
 			(WCM_BAMBOO3_SCROLL_SPREAD_DISTANCE / WCM_BAMBOO3_MAXX);

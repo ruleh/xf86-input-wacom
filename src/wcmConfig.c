@@ -449,9 +449,7 @@ wcmDetectDeviceClass(const InputInfoPtr pInfo)
 		return TRUE;
 
 	/* Bluetooth is also considered as USB */
-	if (gWacomISDV4Device.Detect(pInfo))
-		common->wcmDevCls = &gWacomISDV4Device;
-	else if (gWacomUSBDevice.Detect(pInfo))
+	if (gWacomUSBDevice.Detect(pInfo))
 		common->wcmDevCls = &gWacomUSBDevice;
 	else
 		xf86Msg(X_ERROR, "%s: cannot identify device class.\n", pInfo->name);
@@ -745,7 +743,6 @@ static pointer wcmPlug(pointer module, pointer options, int* errmaj,
 	xf86AddInputDriver(&WACOM, module, 0);
 
 	xf86Msg(X_INFO, "Build version: " BUILD_VERSION "\n");
-	usbListModels();
 
 	return module;
 }
