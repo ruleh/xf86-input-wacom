@@ -83,18 +83,15 @@ static Atom prop_serials;
 static Atom prop_serial_binding;
 static Atom prop_strip_buttons;
 static Atom prop_wheel_buttons;
-static Atom prop_cursorprox;
 static Atom prop_threshold;
 static Atom prop_suppress;
 static Atom prop_touch;
 static Atom prop_hardware_touch;
 static Atom prop_gesture;
 static Atom prop_gesture_param;
-static Atom prop_hover;
 static Atom prop_tooltype;
 static Atom prop_btnactions;
 static Atom prop_product_id;
-static Atom prop_pressure_recal;
 static Atom prop_panscroll_threshold;
 #ifdef DEBUG
 static Atom prop_debuglevels;

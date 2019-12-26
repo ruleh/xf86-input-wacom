@@ -143,7 +143,6 @@ static void wcmSendButtons(InputInfoPtr pInfo, const WacomDeviceState* ds, int b
 {
 	unsigned int button, mask, first_button;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	WacomCommonPtr common = priv->common;
 	DBG(6, priv, "buttons=%d\n", buttons);
 
 	 /* button behaviour (TPC button on):
@@ -308,72 +307,6 @@ static void sendAButton(InputInfoPtr pInfo, const WacomDeviceState* ds, int butt
 }
 
 /**
- * Get the distance an axis was scrolled. This function is aware
- * of the different ways different scrolling axes work and strives
- * to produce a common representation of relative change.
- *
- * @param current  Current value of the axis
- * @param old      Previous value of the axis
- * @param wrap     Maximum value before wraparound occurs (0 if axis does not wrap)
- * @param flags    Flags defining axis attributes: AXIS_INVERT and AXIS_BITWISE
- * @return         Relative change in axis value
- */
-TEST_NON_STATIC int getScrollDelta(int current, int old, int wrap, int flags)
-{
-	int delta;
-
-	if (flags & AXIS_BITWISE)
-	{
-		current = log2((current << 1) | 0x01);
-		old = log2((old << 1) | 0x01);
-		wrap = log2((wrap << 1) | 0x01);
-	}
-
-	delta = current - old;
-
-	if (flags & AXIS_INVERT)
-		delta = -delta;
-
-	if (wrap != 0)
-	{
-		/* Wraparound detection. If the distance old..current
-		 * is larger than the old..current considering the
-		 * wraparound, assume wraparound and readjust */
-		int wrap_delta;
-
-		if (delta < 0)
-			wrap_delta =  (wrap + 1) + delta;
-		else
-			wrap_delta = -((wrap + 1) - delta);
-
-		if (abs(wrap_delta) < abs(delta))
-			delta = wrap_delta;
-	}
-
-	return delta;
-}
-
-/**
- * Get the scroll button/action to send given the delta of
- * the scrolling axis and the possible events that can be
- * sent.
- * 
- * @param delta        Amount of change in the scrolling axis
- * @param action_up    Array index of action to send on scroll up
- * @param action_dn    Array index of action to send on scroll down
- * @return             Array index of action that should be performed, or -1 if none.
- */
-TEST_NON_STATIC int getWheelButton(int delta, int action_up, int action_dn)
-{
-	if (delta > 0)
-		return action_up;
-	else if (delta < 0)
-		return action_dn;
-	else
-		return -1;
-}
-
-/**
  * Send button or actions for a scrolling axis.
  *
  * @param button     X button number to send if no action is defined
@@ -461,41 +394,6 @@ static void wcmUpdateOldState(const InputInfoPtr pInfo,
 	priv->oldState = *ds;
 	priv->oldState.x = currentX;
 	priv->oldState.y = currentY;
-}
-
-static void
-wcmSendPadEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
-		 int first_val, int num_vals, int *valuators)
-{
-	int i;
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-
-	if (!priv->oldState.proximity && ds->proximity)
-		xf86PostProximityEventP(pInfo->dev, 1, first_val, num_vals, VCOPY(valuators, num_vals));
-
-	for (i = 0; i < num_vals; i++)
-		if (valuators[i])
-			break;
-	if (i < num_vals || ds->buttons || ds->relwheel ||
-	    (ds->abswheel != priv->oldState.abswheel) || (ds->abswheel2 != priv->oldState.abswheel2))
-	{
-		sendCommonEvents(pInfo, ds, first_val, num_vals, valuators);
-
-		/* xf86PostMotionEvent is only needed to post the valuators
-		 * It should NOT move the cursor.
-		 */
-		xf86PostMotionEventP(pInfo->dev, TRUE, first_val, num_vals,
-				     VCOPY(valuators, num_vals));
-	}
-	else
-	{
-		if (priv->oldState.buttons)
-			wcmSendButtons(pInfo, ds, ds->buttons, first_val, num_vals, valuators);
-	}
-
-	if (priv->oldState.proximity && !ds->proximity)
-		xf86PostProximityEventP(pInfo->dev, 0, first_val, num_vals,
-					VCOPY(valuators, num_vals));
 }
 
 /* Send events for all tools but pads */
@@ -967,41 +865,6 @@ normalizePressure(const WacomDevicePtr priv, const int raw_pressure)
 }
 
 /*
- * Based on the current pressure, return the button state with Button1
- * either set or unset, depending on whether the pressure threshold
- * conditions have been met.
- *
- * Returns the state of all buttons, but buttons other than button 1 are
- * unmodified.
- */
-#define PRESSURE_BUTTON 1
-static int
-setPressureButton(const WacomDevicePtr priv, int buttons, const int pressure)
-{
-	WacomCommonPtr common = priv->common;
-	int button = PRESSURE_BUTTON;
-
-	/* button 1 Threshold test */
-	/* set button1 (left click) on/off */
-	if (pressure < common->wcmThreshold)
-	{
-		buttons &= ~button;
-		if (priv->oldState.buttons & button) /* left click was on */
-		{
-			/* don't set it off if it is within the tolerance
-			   and threshold is larger than the tolerance */
-			if ((common->wcmThreshold > (priv->maxCurve * THRESHOLD_TOLERANCE)) &&
-			    (pressure > common->wcmThreshold - (priv->maxCurve * THRESHOLD_TOLERANCE)))
-				buttons |= button;
-		}
-	}
-	else
-		buttons |= button;
-
-	return buttons;
-}
-
-/*
  * Broken pen with a broken tip might give high pressure values
  * all the time. We want to warn about this. To avoid getting
  * spurious warnings when the tablet is hit quickly will wait
@@ -1043,7 +906,6 @@ static void detectPressureIssue(WacomDevicePtr priv,
 static void commonDispatchDevice(InputInfoPtr pInfo,
 				 const WacomChannelPtr pChannel)
 {
-	WacomDeviceState* ds = &pChannel->valid.states[0];
 	WacomDevicePtr priv = pInfo->private;
 	WacomCommonPtr common = priv->common;
 	WacomDeviceState filtered;
@@ -1063,8 +925,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 
 	if (common->wcmMaxZ)
 	{
-		int prev_min_pressure = priv->oldState.proximity ? priv->minPressure : 0;
-
 		detectPressureIssue(priv, common, &filtered);
 
 		raw_pressure = filtered.pressure;
@@ -1082,15 +942,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 	{
 		/* Start filter fresh when entering proximity */
 		if (!priv->oldState.proximity)
-			wcmResetSampleCounter(pChannel);
-
-		/* Reset filter whenever the tip is touched to the
-		 * screen to ensure clicks are sent from the pen's
-		 * actual position. Don't reset on other buttons or
-		 * tip-up, or else there may be a noticible jump/
-		 * hook produced in the middle/end of the stroke.
-		 */
-		if ((filtered.buttons & PRESSURE_BUTTON) && !(priv->oldState.buttons & PRESSURE_BUTTON))
 			wcmResetSampleCounter(pChannel);
 
 		wcmFilterCoord(common,pChannel,&filtered);
