@@ -761,53 +761,21 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	if (xf86SetBoolOption(pInfo->options, "ButtonsOnly", 0))
 		priv->flags |= BUTTONS_ONLY_FLAG;
 
-	/* a single or double touch device */
-	{
-		int touch_is_on;
+	// set touch settings
+	common->wcmTouchDefault = 1;
+	common->wcmGestureDefault = 1;
+	common->wcmMaxContacts = 2;
 
-		/* TouchDefault was off for all devices
-		 * except when touch is supported */
-		common->wcmTouchDefault = 1;
+	common->wcmTouch = xf86SetBoolOption(pInfo->options, "Touch",
+					common->wcmTouchDefault);
 
-		touch_is_on = xf86SetBoolOption(pInfo->options, "Touch",
-						common->wcmTouchDefault);
+	common->wcmGesture = xf86SetBoolOption(pInfo->options, "Gesture",
+				    common->wcmGestureDefault);
 
-		if (is_primary || IsTouch(priv))
-			common->wcmTouch = touch_is_on;
-		else if (touch_is_on != common->wcmTouch)
-			xf86Msg(X_WARNING, "%s: Touch option can only be set "
-				"by a touch tool.\n", pInfo->name);
+	common->wcmGestureParameters.wcmTapTime =
+		xf86SetIntOption(pInfo->options, "TapTime",
+		common->wcmGestureParameters.wcmTapTime);
 
-		common->wcmMaxContacts = 2;
-	}
-
-	/* 2FG touch device */
-	{
-		int gesture_is_on;
-
-		/* GestureDefault was off for all devices
-		 * except when multi-touch is supported */
-		common->wcmGestureDefault = 1;
-
-		gesture_is_on = xf86SetBoolOption(pInfo->options, "Gesture",
-					    common->wcmGestureDefault);
-
-		if (is_primary || IsTouch(priv))
-			common->wcmGesture = gesture_is_on;
-		else if (gesture_is_on != common->wcmGesture)
-			xf86Msg(X_WARNING, "%s: Touch gesture option can only "
-				"be set by a touch tool.\n", pInfo->name);
-
-		common->wcmGestureParameters.wcmTapTime =
-			xf86SetIntOption(pInfo->options, "TapTime",
-			common->wcmGestureParameters.wcmTapTime);
-	}
-
-	if (IsStylus(priv) || IsEraser(priv)) {
-		common->wcmPressureRecalibration
-			= xf86SetBoolOption(pInfo->options,
-					    "PressureRecalibration", 1);
-	}
 
 	for (i=0; i<WCM_MAX_BUTTONS; i++)
 	{
