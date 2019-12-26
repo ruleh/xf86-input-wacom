@@ -231,34 +231,6 @@ static void usbInitProtocol5(WacomCommonPtr common, const char* id,
 	common->wcmFlags |= TILT_ENABLED_FLAG;
 }
 
-/* Initialize fixed PAD channel's state to in proximity.
- *
- * Some, but not all, Wacom protocol 4/5 devices are always in proximity.
- * Because of evdev filtering, there will never be a BTN_TOOL_FINGER
- * sent to initialize state.
- * Generic protocol devices never send anything to help initialize PAD
- * device as well.
- * This helps those 2 cases and does not hurt the cases where kernel
- * driver sends out-of-proximity event for PAD since PAD is always on
- * its own channel, PAD_CHANNEL.
- */
-static void usbWcmInitPadState(InputInfoPtr pInfo)
-{
-	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
-	WacomCommonPtr common = priv->common;
-	WacomDeviceState *ds;
-	int channel = PAD_CHANNEL;
-
-	DBG(6, common, "Initializing PAD channel %d\n", channel);
-
-	ds = &common->wcmChannel[channel].work;
-
-	ds->proximity = 1;
-	ds->device_type = PAD_ID;
-	ds->device_id = PAD_DEVICE_ID;
-	ds->serial_num = channel;
-}
-
 int usbWcmGetRanges(InputInfoPtr pInfo)
 {
 	struct input_absinfo absinfo;
@@ -286,11 +258,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 
 	if (!ISBITSET(ev,EV_ABS))
 	{
-		/* may be an expresskey only interface */
-		if (ISBITSET(common->wcmKeys, BTN_FORWARD) ||
-		    ISBITSET(common->wcmKeys, BTN_0))
-			goto pad_init;
-
 		xf86Msg(X_ERROR, "%s: no abs bits.\n", pInfo->name);
 		return !Success;
 	}
@@ -305,11 +272,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	/* max x */
 	if (ioctl(pInfo->fd, EVIOCGABS(ABS_X), &absinfo) < 0)
 	{
-		/* may be a PAD only interface */
-		if (ISBITSET(common->wcmKeys, BTN_FORWARD) ||
-		    ISBITSET(common->wcmKeys, BTN_0))
-			goto pad_init;
-
 		xf86Msg(X_ERROR, "%s: unable to ioctl xmax value.\n", pInfo->name);
 		return !Success;
 	}
@@ -513,9 +475,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 			common->wcmHWTouchSwitchState = 1;
 	}
 
-pad_init:
-	usbWcmInitPadState(pInfo);
-
 	return Success;
 }
 
@@ -526,10 +485,8 @@ static int usbDetectConfig(InputInfoPtr pInfo)
 	wcmUSBData *usbdata = common->private;
 
 	DBG(10, common, "\n");
-	if (IsPad (priv))
-		priv->nbuttons = usbdata->npadkeys;
-	else
-		priv->nbuttons = usbdata->nbuttons;
+
+	priv->nbuttons = usbdata->nbuttons;
 
 	if (!common->wcmCursorProxoutDist)
 		common->wcmCursorProxoutDist
@@ -549,39 +506,6 @@ static int usbParse(InputInfoPtr pInfo, const unsigned char* data, int len)
 	memcpy(&event, data, sizeof(event));
 	usbParseEvent(pInfo, &event);
 	return common->wcmPktLength;
-}
-
-/**
- * Returns a serial number for the provided device_type and serial, as
- * through it came from from a Protocol 5 device.
- *
- * Protocol 5 serial numbers will be returned unchanged. Otherwise,
- * anonymous tools (from Protocol 4 and Generic Protocol) will have
- * serial numbers of: -1 (pad), 1 (pen/1st finger), 2 (2nd finger),
- * etc.
- *
- * @param[in] device_type  Type of device (e.g. STYLUS_ID, TOUCH_ID, PAD_ID)
- * @param[in] serial       Serial number of device
- * @return                 Serial number of device as through from Protocol 5
- */
-static int protocol5Serial(int device_type, unsigned int serial) {
-	if (!serial) {
-		/* Generic Protocol does not send serial numbers */
-		return device_type == PAD_ID ? -1 : 1;
-	}
-	else if (serial == 0xf0) {
-		/* Protocol 4 uses the expected anonymous serial
-		 * numbers, but has the wrong PAD serial number.
-		 * This could cause problem if 0xf0 is ever used
-		 * for a Protocol 5 serial number, but isn't a
-		 * problem as yet.
-		 */
-		return -1;
-	}
-	else {
-		/* Protocol 5 FTW */
-		return serial;
-	}
 }
 
 /**
@@ -1198,35 +1122,6 @@ static int refreshDeviceType(WacomCommonPtr common, int fd)
 	return 0;
 }
 
-static int deriveDeviceTypeFromButtonEvent(WacomCommonPtr common,
-					   const struct input_event *event_ptr)
-{
-	wcmUSBData *usbdata = common->private;
-	int nkeys;
-
-	if (event_ptr->type == EV_KEY) {
-
-		switch (event_ptr->code) {
-		case BTN_LEFT:
-		case BTN_MIDDLE:
-		case BTN_RIGHT:
-		case BTN_SIDE:
-		case BTN_BACK:
-		case BTN_EXTRA:
-		case BTN_FORWARD:
-			return PAD_ID;
-		default:
-			for (nkeys = 0; nkeys < usbdata->npadkeys; nkeys++)
-			{
-				if (event_ptr->code == usbdata->padkey_code[nkeys]) {
-					return PAD_ID;
-				}
-			}
-		}
-	}
-	return 0;
-}
-
 /***
  * Retrieve the tool type from an USB data packet by looking at the event
  * codes. Refer to linux/input.h for event codes that define tool types.
@@ -1259,10 +1154,6 @@ static int usbInitToolType(WacomCommonPtr common, int fd,
 	if (!device_type)
 		device_type = refreshDeviceType(common, fd);
 
-	if (!device_type) /* expresskey pressed at startup or missing type */
-		for (i = 0; (i < nevents) && !device_type; ++i, event_ptr++)
-			device_type = deriveDeviceTypeFromButtonEvent(common, event_ptr);
-
 	return device_type;
 }
 
@@ -1284,7 +1175,7 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	                                         private->wcmEventCnt,
 	                                         dslast.device_type);
 
-	private->wcmLastToolSerial = protocol5Serial(private->wcmDeviceType, private->wcmLastToolSerial);
+	private->wcmLastToolSerial = 1;
 	channel = usbChooseChannel(common, private->wcmDeviceType, private->wcmLastToolSerial);
 
 	/* couldn't decide channel? invalid data */
@@ -1374,7 +1265,7 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	}
 
 	/* verify we have minimal data when entering prox */
-	if (ds->proximity && !dslast.proximity && ds->device_type != PAD_ID) {
+	if (ds->proximity && !dslast.proximity) {
 		struct input_absinfo absinfo;
 
 		if (!ds->x) {

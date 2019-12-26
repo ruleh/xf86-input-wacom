@@ -77,8 +77,6 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->nbuttons = WCM_MAX_BUTTONS;       /* Default number of buttons */
 	priv->wheel_default[WHEEL_REL_UP] = 5;
 	priv->wheel_default[WHEEL_REL_DN] = 4;
-	/* wheel events are set to 0, but the pad overwrites this default
-	 * later in wcmParseOptions, when we have IsPad() available */
 	priv->wheel_default[WHEEL_ABS_UP] = 0;
 	priv->wheel_default[WHEEL_ABS_DN] = 0;
 	priv->wheel_default[WHEEL2_ABS_UP] = 0;
@@ -150,10 +148,6 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 
 		priv->flags = flags;
 		pInfo->type_name = WACOM_PROP_XI_TYPE_TOUCH;
-	} else if (xf86NameCmp(type, "pad") == 0)
-	{
-		priv->flags = ABSOLUTE_FLAG|PAD_ID;
-		pInfo->type_name = WACOM_PROP_XI_TYPE_PAD;
 	} else
 		goto invalid;
 

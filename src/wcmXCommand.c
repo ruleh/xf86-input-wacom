@@ -45,10 +45,6 @@ int wcmDevSwitchModeCall(InputInfoPtr pInfo, int mode)
 
 	DBG(3, priv, "to mode=%d\n", mode);
 
-	/* Pad is always in absolute mode.*/
-	if (IsPad(priv))
-		return (mode == Absolute) ? Success : XI_BadMode;
-
 	if ((mode == Absolute) && !is_absolute(pInfo))
 		set_absolute(pInfo, TRUE);
 	else if ((mode == Relative) && is_absolute(pInfo))
@@ -242,18 +238,14 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 				common->device_path, FALSE);
 	XISetDevicePropertyDeletable(pInfo->dev, prop_devnode, FALSE);
 
-	if (!IsPad(priv)) {
-		values[0] = priv->topX;
-		values[1] = priv->topY;
-		values[2] = priv->bottomX;
-		values[3] = priv->bottomY;
-		prop_tablet_area = InitWcmAtom(pInfo->dev, WACOM_PROP_TABLET_AREA, XA_INTEGER, 32, 4, values);
-	}
+	values[0] = priv->topX;
+	values[1] = priv->topY;
+	values[2] = priv->bottomX;
+	values[3] = priv->bottomY;
+	prop_tablet_area = InitWcmAtom(pInfo->dev, WACOM_PROP_TABLET_AREA, XA_INTEGER, 32, 4, values);
 
 	values[0] = common->wcmRotate;
-	if (!IsPad(priv)) {
-		prop_rotation = InitWcmAtom(pInfo->dev, WACOM_PROP_ROTATION, XA_INTEGER, 8, 1, values);
-	}
+	prop_rotation = InitWcmAtom(pInfo->dev, WACOM_PROP_ROTATION, XA_INTEGER, 8, 1, values);
 
 	if (IsTouch(priv)) {
 		values[0] = priv->nPressCtrl[0];
@@ -304,21 +296,6 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	prop_btnactions = InitWcmAtom(pInfo->dev, WACOM_PROP_BUTTON_ACTIONS, XA_ATOM, 32, priv->nbuttons, values);
 	for (i = 0; i < priv->nbuttons; i++)
 		wcmResetButtonAction(pInfo, i, priv->nbuttons);
-
-	if (IsPad(priv)) {
-		memset(values, 0, sizeof(values));
-		prop_strip_buttons = InitWcmAtom(pInfo->dev, WACOM_PROP_STRIPBUTTONS, XA_ATOM, 32, 4, values);
-		for (i = 0; i < 4; i++)
-			wcmResetStripAction(pInfo, i);
-	}
-
-	if (IsPad(priv))
-	{
-		memset(values, 0, sizeof(values));
-		prop_wheel_buttons = InitWcmAtom(pInfo->dev, WACOM_PROP_WHEELBUTTONS, XA_ATOM, 32, 6, values);
-		for (i = 0; i < 6; i++)
-			wcmResetWheelAction(pInfo, i);
-	}
 
 	values[0] = common->wcmPanscrollThreshold;
 	prop_panscroll_threshold = InitWcmAtom(pInfo->dev, WACOM_PROP_PANSCROLL_THRESHOLD, XA_INTEGER, 32, 1, values);
@@ -749,9 +726,6 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 
 		if (!wcmCheckPressureCurveValues(pcurve[0], pcurve[1],
 						 pcurve[2], pcurve[3]))
-			return BadValue;
-
-		if (IsPad (priv))
 			return BadValue;
 
 		if (!checkonly)

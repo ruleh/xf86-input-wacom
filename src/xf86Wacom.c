@@ -196,11 +196,8 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min = 0;
 	max = 1;
 
-	if (!IsPad(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_PRESSURE);
-		max = priv->maxCurve;
-	}
+	label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_PRESSURE);
+	max = priv->maxCurve;
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 
@@ -347,10 +344,7 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 	}
 #endif
 
-	if (!IsPad(priv))
-	{
-		wcmInitialToolSize(pInfo);
-	}
+	wcmInitialToolSize(pInfo);
 
 	if (!wcmInitAxes(pWcm))
 		return FALSE;

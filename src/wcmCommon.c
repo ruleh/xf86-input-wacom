@@ -384,78 +384,6 @@ TEST_NON_STATIC int getWheelButton(int delta, int action_up, int action_dn)
  * @param num_vals
  * @param valuators
  */
-static void sendWheelStripEvent(unsigned int *action, const WacomDeviceState* ds, int nactions,
-				InputInfoPtr pInfo, int first_val, int num_vals, int *valuators)
-{
-	sendAction(pInfo, ds, 1, action, nactions, first_val, num_vals, valuators);
-	sendAction(pInfo, ds, 0, action, nactions, first_val, num_vals, valuators);
-}
-
-/*****************************************************************************
- * sendWheelStripEvents --
- *   Send events defined for relative/absolute wheels or strips
- ****************************************************************************/
-
-static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
-				 int first_val, int num_vals, int *valuators)
-{
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	WacomCommonPtr common = priv->common;
-	int delta = 0, idx = 0;
-
-	DBG(10, priv, "\n");
-
-	/* emulate events for left strip */
-	delta = getScrollDelta(ds->stripx, priv->oldState.stripx, 0, AXIS_INVERT | AXIS_BITWISE);
-	idx = getWheelButton(delta, STRIP_LEFT_UP, STRIP_LEFT_DN);
-	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
-	{
-		DBG(10, priv, "Left touch strip scroll delta = %d\n", delta);
-		sendWheelStripEvent(priv->strip_keys[idx], ds, ARRAY_SIZE(priv->strip_keys[idx]),
-		                    pInfo, first_val, num_vals, valuators);
-	}
-
-	/* emulate events for right strip */
-	delta = getScrollDelta(ds->stripy, priv->oldState.stripy, 0, AXIS_INVERT | AXIS_BITWISE);
-	idx = getWheelButton(delta, STRIP_RIGHT_UP, STRIP_RIGHT_DN);
-	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
-	{
-		DBG(10, priv, "Right touch strip scroll delta = %d\n", delta);
-		sendWheelStripEvent(priv->strip_keys[idx], ds, ARRAY_SIZE(priv->strip_keys[idx]),
-		                    pInfo, first_val, num_vals, valuators);
-	}
-
-	/* emulate events for relative wheel */
-	delta = getScrollDelta(ds->relwheel, 0, 0, 0);
-	idx = getWheelButton(delta, WHEEL_REL_UP, WHEEL_REL_DN);
-	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
-	{
-		DBG(10, priv, "Relative wheel scroll delta = %d\n", delta);
-		sendWheelStripEvent(priv->wheel_keys[idx], ds, ARRAY_SIZE(priv->wheel_keys[idx]),
-		                    pInfo, first_val, num_vals, valuators);
-	}
-
-	/* emulate events for left touch ring */
-	delta = getScrollDelta(ds->abswheel, priv->oldState.abswheel, common->wcmMaxRing, AXIS_INVERT);
-	idx = getWheelButton(delta, WHEEL_ABS_UP, WHEEL_ABS_DN);
-	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
-	{
-		DBG(10, priv, "Left touch wheel scroll delta = %d\n", delta);
-		sendWheelStripEvent(priv->wheel_keys[idx], ds, ARRAY_SIZE(priv->wheel_keys[idx]),
-		                    pInfo, first_val, num_vals, valuators);
-	}
-
-	/* emulate events for right touch ring */
-	delta = getScrollDelta(ds->abswheel2, priv->oldState.abswheel2, common->wcmMaxRing, AXIS_INVERT);
-	idx = getWheelButton(delta, WHEEL2_ABS_UP, WHEEL2_ABS_DN);
-	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
-	{
-		DBG(10, priv, "Right touch wheel scroll delta = %d\n", delta);
-		sendWheelStripEvent(priv->wheel_keys[idx], ds, ARRAY_SIZE(priv->wheel_keys[idx]),
-		                    pInfo, first_val, num_vals, valuators);
-	}
-}
-
 /*****************************************************************************
  * sendCommonEvents --
  *   Send events common between pad and stylus/cursor/eraser.
@@ -473,12 +401,6 @@ static void sendCommonEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	/* send button events when state changed or first time in prox and button unpresses */
 	if (priv->oldState.buttons != buttons || (!priv->oldState.proximity && !buttons))
 		wcmSendButtons(pInfo, ds, buttons, first_val, num_vals, valuators);
-
-	/* emulate wheel/strip events when defined */
-	if ( ds->relwheel || (ds->abswheel != priv->oldState.abswheel) || (ds->abswheel2 != priv->oldState.abswheel2) ||
-		( (ds->stripx - priv->oldState.stripx) && ds->stripx && priv->oldState.stripx) ||
-			((ds->stripy - priv->oldState.stripy) && ds->stripy && priv->oldState.stripy) )
-		sendWheelStripEvents(pInfo, ds, first_val, num_vals, valuators);
 }
 
 /* rotate x and y before post X inout events */
@@ -677,13 +599,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		y = priv->oldState.y;
 	}
 
-	/* use tx and ty to report stripx and stripy */
-	if (type == PAD_ID)
-	{
-		tx = ds->stripx;
-		ty = ds->stripy;
-	}
-
 	/* cancel panscroll */
 	if (!ds->proximity)
 		priv->flags &= ~SCROLLMODE_FLAG;
@@ -732,13 +647,9 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	if (priv->naxes > 6)
 		valuators[6] = v6;
 
-	if (type == PAD_ID)
-		wcmSendPadEvents(pInfo, ds, 3, priv->naxes - 3, &valuators[3]); /* pad doesn't post x/y/z */
-	else {
-		/* don't move the cursor if in gesture mode (except drag mode) */
-		if ((type != TOUCH_ID) || wcmTouchNeedSendEvents(priv->common))
-			wcmSendNonPadEvents(pInfo, ds, 0, priv->naxes, valuators);
-	}
+	/* don't move the cursor if in gesture mode (except drag mode) */
+	if ((type != TOUCH_ID) || wcmTouchNeedSendEvents(priv->common))
+		wcmSendNonPadEvents(pInfo, ds, 0, priv->naxes, valuators);
 
 	if (ds->proximity)
 		wcmUpdateOldState(pInfo, ds, x, y);
@@ -874,12 +785,6 @@ static Bool check_arbitrated_control(InputInfoPtr pInfo, WacomDeviceStatePtr ds)
 	WacomDevicePtr active = WACOM_DRIVER.active;
 	WacomDevicePtr priv = pInfo->private;
 
-	if (IsPad(priv)) {
-		/* Pad may never be the "active" pointer controller */
-		DBG(6, priv, "Event from pad; not yielding pointer control\n.");
-		return FALSE;
-	}
-
 	if (active == NULL || active->oldState.device_id == ds->device_id) {
 		DBG(11, priv, "Event from active device; maintaining pointer control.\n");
 		return TRUE;
@@ -976,7 +881,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 		else
 			WACOM_DRIVER.active = NULL;
 	}
-	else if (!IsPad(priv)) {
+	else {
 		return;
 	}
 
@@ -1193,7 +1098,7 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 	}
 
 	/* Optionally filter values only while in proximity */
-	if (filtered.proximity && filtered.device_type != PAD_ID)
+	if (filtered.proximity)
 	{
 		/* Start filter fresh when entering proximity */
 		if (!priv->oldState.proximity)
@@ -1220,7 +1125,7 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 
 	/* User-requested transformations come last */
 
-	if (!is_absolute(pInfo) && !IsPad(priv))
+	if (!is_absolute(pInfo)) 
 	{
 		/* To improve the accuracy of relative x/y,
 		 * don't send motion event when there is no movement.

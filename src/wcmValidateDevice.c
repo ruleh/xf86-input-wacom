@@ -596,18 +596,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 
 	free(s);
 
-	/* Pad is always in absolute mode.
-	 * The pad also defaults to wheel scrolling, unlike the pens
-	 * (interesting effects happen on ArtPen and others with build-in
-	 * wheels)
-	 */
-	if (IsPad(priv))
-	{
-		priv->wheel_default[WHEEL_ABS_UP] = priv->wheel_default[WHEEL2_ABS_UP] = 4;
-		priv->wheel_default[WHEEL_ABS_DN] = priv->wheel_default[WHEEL2_ABS_DN] = 5;
-		set_absolute(pInfo, TRUE);
-	}
-
 	s = xf86SetStrOption(pInfo->options, "Rotate", NULL);
 
 	if (s)

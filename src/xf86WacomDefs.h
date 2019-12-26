@@ -171,7 +171,6 @@ struct _WacomModel
 #define SCROLLMODE_FLAG		0x00001000
 
 #define IsTouch(priv)  (DEVICE_ID((priv)->flags) == TOUCH_ID)
-#define IsPad(priv)    (DEVICE_ID((priv)->flags) == PAD_ID)
 
 #define IsUSBDevice(common) ((common)->wcmDevCls == &gWacomUSBDevice)
 
