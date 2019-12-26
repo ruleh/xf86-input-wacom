@@ -240,15 +240,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
 	WacomCommonPtr common =	priv->common;
 	wcmUSBData* private = common->private;
-	int is_touch = IsTouch(priv);
-
-	/* Devices such as Bamboo P&T may have Pad data reported in the same
-	 * packet as Touch.  It's normal for Pad to be called first but logic
-	 * requires it to act the same as Touch.
-	 */
-	if (ISBITSET(common->wcmKeys, BTN_TOOL_DOUBLETAP)
-	     && ISBITSET(common->wcmKeys, BTN_FORWARD))
-		is_touch = 1;
 
 	if (ioctl(pInfo->fd, EVIOCGBIT(0 /*EV*/, sizeof(ev)), ev) < 0)
 	{
@@ -283,21 +274,11 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		return !Success;
 	}
 
-	if (!is_touch)
-	{
-		common->wcmMinX = absinfo.minimum;
-		common->wcmMaxX = absinfo.maximum;
+	
+	common->wcmMaxTouchX = absinfo.maximum;
 
-		if (absinfo.resolution > 0)
-			common->wcmResolX = absinfo.resolution * 1000;
-	}
-	else
-	{
-		common->wcmMaxTouchX = absinfo.maximum;
-
-		if (absinfo.resolution > 0)
-			common->wcmTouchResolX = absinfo.resolution * 1000;
-	}
+	if (absinfo.resolution > 0)
+		common->wcmTouchResolX = absinfo.resolution * 1000;
 
 	/* max y */
 	if (ioctl(pInfo->fd, EVIOCGABS(ABS_Y), &absinfo) < 0)
@@ -313,33 +294,20 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		return !Success;
 	}
 
-	if (!is_touch)
-	{
-		common->wcmMinY = absinfo.minimum;
-		common->wcmMaxY = absinfo.maximum;
+	common->wcmMaxTouchY = absinfo.maximum;
 
-		if (absinfo.resolution > 0)
-			common->wcmResolY = absinfo.resolution * 1000;
-	}
-	else
-	{
-		common->wcmMaxTouchY = absinfo.maximum;
+	if (absinfo.resolution > 0)
+		common->wcmTouchResolY = absinfo.resolution * 1000;
 
-		if (absinfo.resolution > 0)
-			common->wcmTouchResolY = absinfo.resolution * 1000;
-	}
 
 	/* max finger strip X for tablets with Expresskeys
 	 * or physical X for touch devices in hundredths of a mm */
 	if (ISBITSET(abs, ABS_RX) &&
 			!ioctl(pInfo->fd, EVIOCGABS(ABS_RX), &absinfo))
 	{
-		if (is_touch)
-			common->wcmTouchResolX =
-				(int)(((double)common->wcmMaxTouchX * 100000.0
-				 / (double)absinfo.maximum) + 0.5);
-		else
-			common->wcmMaxStripX = absinfo.maximum;
+		common->wcmTouchResolX =
+			(int)(((double)common->wcmMaxTouchX * 100000.0
+			 / (double)absinfo.maximum) + 0.5);
 	}
 
 	/* max touchring value for standalone pad tools */
@@ -429,12 +397,9 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	if (ISBITSET(abs, ABS_RY) &&
 			!ioctl(pInfo->fd, EVIOCGABS(ABS_RY), &absinfo))
 	{
-		if (is_touch)
-			common->wcmTouchResolY =
-				 (int)(((double)common->wcmMaxTouchY * 100000.0
-				 / (double)absinfo.maximum) + 0.5);
-		else
-			common->wcmMaxStripY = absinfo.maximum;
+		common->wcmTouchResolY =
+			 (int)(((double)common->wcmMaxTouchY * 100000.0
+			 / (double)absinfo.maximum) + 0.5);
 	}
 
 	/* max z cannot be configured */

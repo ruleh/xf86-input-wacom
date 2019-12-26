@@ -102,22 +102,10 @@ wcmInitialToolSize(InputInfoPtr pInfo)
 
 	/* assign max and resolution here since we don't get them during
 	 * the configuration stage */
-	if (IsTouch(priv))
-	{
-		priv->maxX = common->wcmMaxTouchX;
-		priv->maxY = common->wcmMaxTouchY;
-		priv->resolX = common->wcmTouchResolX;
-		priv->resolY = common->wcmTouchResolY;
-	}
-	else
-	{
-		priv->minX = common->wcmMinX;
-		priv->minY = common->wcmMinY;
-		priv->maxX = common->wcmMaxX;
-		priv->maxY = common->wcmMaxY;
-		priv->resolX = common->wcmResolX;
-		priv->resolY = common->wcmResolY;
-	}
+	priv->maxX = common->wcmMaxTouchX;
+	priv->maxY = common->wcmMaxTouchY;
+	priv->resolX = common->wcmTouchResolX;
+	priv->resolY = common->wcmTouchResolY;
 
 	if (!priv->topX)
 		priv->topX = priv->minX;
@@ -333,15 +321,13 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 	}
 
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 16
-	if (IsTouch(priv)) {
-		if (!InitTouchClassDeviceStruct(pInfo->dev, common->wcmMaxContacts,
-						XIDirectTouch, 2))
-		{
-			xf86Msg(X_ERROR, "Unable to init touch class device struct!\n");
-			return FALSE;
-		}
-		priv->common->touch_mask = valuator_mask_new(2);
+	if (!InitTouchClassDeviceStruct(pInfo->dev, common->wcmMaxContacts,
+					XIDirectTouch, 2))
+	{
+		xf86Msg(X_ERROR, "Unable to init touch class device struct!\n");
+		return FALSE;
 	}
+	priv->common->touch_mask = valuator_mask_new(2);
 #endif
 
 	wcmInitialToolSize(pInfo);

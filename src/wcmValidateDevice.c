@@ -649,7 +649,7 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	 * Slightly raised curve might be 0,5,95,100
 	 */
 	s = xf86SetStrOption(pInfo->options, "PressCurve", "0,0,100,100");
-	if (s && IsTouch(priv))
+	if (s)
 	{
 		int a,b,c,d;
 		if ((sscanf(s,"%d,%d,%d,%d",&a,&b,&c,&d) != 4) ||
@@ -771,30 +771,27 @@ Bool wcmPostInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	WacomDevicePtr  priv = (WacomDevicePtr)pInfo->private;
 	WacomCommonPtr  common = priv->common;
 
+	int zoom_distance = common->wcmMaxTouchX *
+		(WCM_BAMBOO3_ZOOM_DISTANCE / WCM_BAMBOO3_MAXX);
+	int scroll_distance = common->wcmMaxTouchX *
+		(WCM_BAMBOO3_SCROLL_DISTANCE / WCM_BAMBOO3_MAXX);
+
+
 	common->wcmMaxZ = xf86SetIntOption(pInfo->options, "MaxZ",
 					   common->wcmMaxZ);
 
-	/* 2FG touch device */
-	if (IsTouch(priv))
-	{
-		int zoom_distance = common->wcmMaxTouchX *
-			(WCM_BAMBOO3_ZOOM_DISTANCE / WCM_BAMBOO3_MAXX);
-		int scroll_distance = common->wcmMaxTouchX *
-			(WCM_BAMBOO3_SCROLL_DISTANCE / WCM_BAMBOO3_MAXX);
+	common->wcmGestureParameters.wcmZoomDistance =
+		xf86SetIntOption(pInfo->options, "ZoomDistance",
+				 zoom_distance);
 
-		common->wcmGestureParameters.wcmZoomDistance =
-			xf86SetIntOption(pInfo->options, "ZoomDistance",
-					 zoom_distance);
+	common->wcmGestureParameters.wcmScrollDistance =
+		xf86SetIntOption(pInfo->options, "ScrollDistance",
+				 scroll_distance);
 
-		common->wcmGestureParameters.wcmScrollDistance =
-			xf86SetIntOption(pInfo->options, "ScrollDistance",
-					 scroll_distance);
-
-		// TODO: add this as option
-		common->wcmGestureParameters.wcmMaxScrollFingerSpread =
-			common->wcmMaxTouchX *
-			(WCM_BAMBOO3_SCROLL_SPREAD_DISTANCE / WCM_BAMBOO3_MAXX);
-	}
+	// TODO: add this as option
+	common->wcmGestureParameters.wcmMaxScrollFingerSpread =
+		common->wcmMaxTouchX *
+		(WCM_BAMBOO3_SCROLL_SPREAD_DISTANCE / WCM_BAMBOO3_MAXX);
 
 
 	return TRUE;

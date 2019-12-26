@@ -247,13 +247,11 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	values[0] = common->wcmRotate;
 	prop_rotation = InitWcmAtom(pInfo->dev, WACOM_PROP_ROTATION, XA_INTEGER, 8, 1, values);
 
-	if (IsTouch(priv)) {
-		values[0] = priv->nPressCtrl[0];
-		values[1] = priv->nPressCtrl[1];
-		values[2] = priv->nPressCtrl[2];
-		values[3] = priv->nPressCtrl[3];
-		prop_pressurecurve = InitWcmAtom(pInfo->dev, WACOM_PROP_PRESSURECURVE, XA_INTEGER, 32, 4, values);
-	}
+	values[0] = priv->nPressCtrl[0];
+	values[1] = priv->nPressCtrl[1];
+	values[2] = priv->nPressCtrl[2];
+	values[3] = priv->nPressCtrl[3];
+	prop_pressurecurve = InitWcmAtom(pInfo->dev, WACOM_PROP_PRESSURECURVE, XA_INTEGER, 32, 4, values);
 
 	values[0] = common->tablet_id;
 	values[1] = priv->oldState.serial_num;
@@ -276,7 +274,7 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	values[0] = common->wcmTouch;
 	prop_touch = InitWcmAtom(pInfo->dev, WACOM_PROP_TOUCH, XA_INTEGER, 8, 1, values);
 
-	if (common->wcmHasHWTouchSwitch && IsTouch(priv)) {
+	if (common->wcmHasHWTouchSwitch) {
 		values[0] = common->wcmHWTouchSwitchState;
 		prop_hardware_touch = InitWcmAtom(pInfo->dev, WACOM_PROP_HARDWARE_TOUCH, XA_INTEGER, 8, 1, values);
 	}
@@ -898,8 +896,7 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 		if (values[0] <= 0)
 			return BadValue;
 
-		if (IsTouch(priv))
-			return BadMatch;
+		return BadMatch;
 
 		if (!checkonly)
 			common->wcmPanscrollThreshold = values[0];

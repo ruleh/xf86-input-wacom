@@ -348,9 +348,6 @@ void wcmCancelGesture(InputInfoPtr pInfo)
 	WacomDevicePtr priv = pInfo->private;
 	WacomCommonPtr common = priv->common;
 
-	if (!IsTouch(priv))
-		return;
-
 	if (common->wcmGestureMode == GESTURE_DRAG_MODE)
 		wcmSendButtonClick(priv, 1, 0);
 	common->wcmGestureMode = GESTURE_CANCEL_MODE;
@@ -366,14 +363,6 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
 
 	DBG(10, priv, "\n");
-
-	if (!IsTouch(priv))
-	{
-		/* this should never happen */
-		LogMessageVerbSigSafe(X_ERROR, 0, "WACOM: No touch device found for %s \n",
-			 common->device_path);
-		return;
-	}
 
 	/* Do not process gestures while in CANCEL mode. Only reset back to
 	 * NONE mode once all fingers have left the screen.

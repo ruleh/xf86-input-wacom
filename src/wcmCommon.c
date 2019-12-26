@@ -791,10 +791,9 @@ static Bool check_arbitrated_control(InputInfoPtr pInfo, WacomDeviceStatePtr ds)
 	}
 	else {
 		/* Non-touch input has priority over touch in general */
-		Bool yield = !IsTouch(priv);
 		DBG(6, priv, "Event from non-active %s device; %s pointer control.\n",
-		    yield ? "non-touch" : "touch", yield ? "yielding" : "not yielding");
-		return yield;
+		    "touch", "not yielding");
+		return FALSE;
 	}
 }
 
@@ -1081,7 +1080,7 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 		return;
 	}
 
-	if (IsTouch(priv) && common->wcmMaxZ)
+	if (common->wcmMaxZ)
 	{
 		int prev_min_pressure = priv->oldState.proximity ? priv->minPressure : 0;
 
@@ -1182,13 +1181,12 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 	}
 	xf86Msg(X_CONFIG, "%s: panscroll modified to %d\n", pInfo->name, common->wcmPanscrollThreshold);
 
-	if (IsTouch(priv))
-		xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
-			"resX=%d resY=%d \n",
-			pInfo->name,
-			common->wcmMaxTouchX, common->wcmMaxTouchY,
-			common->wcmMaxZ,
-			common->wcmTouchResolX, common->wcmTouchResolY);
+	xf86Msg(X_PROBED, "%s: maxX=%d maxY=%d maxZ=%d "
+		"resX=%d resY=%d \n",
+		pInfo->name,
+		common->wcmMaxTouchX, common->wcmMaxTouchY,
+		common->wcmMaxZ,
+		common->wcmTouchResolX, common->wcmTouchResolY);
 
 	return Success;
 }
@@ -1200,7 +1198,7 @@ void wcmSoftOutEvent(InputInfoPtr pInfo)
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 
 	out.device_type = DEVICE_ID(priv->flags);
-	out.device_id = wcmGetPhyDeviceID(priv);
+	out.device_id = TOUCH_DEVICE_ID;
 	DBG(2, priv->common, "send a soft prox-out\n");
 	wcmSendEvents(pInfo, &out);
 }

@@ -170,8 +170,6 @@ struct _WacomModel
 #define BUTTONS_ONLY_FLAG	0x00000800
 #define SCROLLMODE_FLAG		0x00001000
 
-#define IsTouch(priv)  (DEVICE_ID((priv)->flags) == TOUCH_ID)
-
 #define IsUSBDevice(common) ((common)->wcmDevCls == &gWacomUSBDevice)
 
 #define FILTER_PRESSURE_RES	65536	/* maximum points in pressure curve */

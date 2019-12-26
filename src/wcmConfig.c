@@ -152,7 +152,7 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 		goto invalid;
 
 	/* Set the device id of the "last seen" device on this tool */
-	priv->oldState.device_id = wcmGetPhyDeviceID(priv);
+	priv->oldState.device_id = TOUCH_DEVICE_ID;
 
 	if (!priv->tool)
 		return 0;
@@ -166,14 +166,6 @@ invalid:
 			 "Must be one of stylus, touch, cursor, eraser, or pad\n",
 			 pInfo->name);
 	return 0;
-}
-
-int wcmGetPhyDeviceID(WacomDevicePtr priv)
-{
-	if (IsTouch(priv))
-		return TOUCH_DEVICE_ID;
-	else
-		return PAD_DEVICE_ID;
 }
 
 /* 
