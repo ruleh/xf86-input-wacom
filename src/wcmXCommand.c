@@ -273,11 +273,6 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	values[0] = priv->serial;
 	prop_serial_binding = InitWcmAtom(pInfo->dev, WACOM_PROP_SERIAL_BIND, XA_INTEGER, 32, 1, values);
 
-	if (IsCursor(priv)) {
-		values[0] = common->wcmCursorProxoutDist;
-		prop_cursorprox = InitWcmAtom(pInfo->dev, WACOM_PROP_PROXIMITY_THRESHOLD, XA_INTEGER, 32, 1, values);
-	}
-
 	values[0] = (!common->wcmMaxZ) ? 0 : common->wcmThreshold;
 	values[0] = wcmInternalToUserPressure(pInfo, values[0]);
 	prop_threshold = InitWcmAtom(pInfo->dev, WACOM_PROP_PRESSURE_THRESHOLD, XA_INTEGER, 32, 1, values);
@@ -317,7 +312,7 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 			wcmResetStripAction(pInfo, i);
 	}
 
-	if (IsPad(priv) || IsCursor(priv))
+	if (IsPad(priv))
 	{
 		memset(values, 0, sizeof(values));
 		prop_wheel_buttons = InitWcmAtom(pInfo->dev, WACOM_PROP_WHEELBUTTONS, XA_ATOM, 32, 6, values);
@@ -756,7 +751,7 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 						 pcurve[2], pcurve[3]))
 			return BadValue;
 
-		if (IsCursor(priv) || IsPad (priv))
+		if (IsPad (priv))
 			return BadValue;
 
 		if (!checkonly)
@@ -823,24 +818,7 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 		return wcmSetActionsProperty(dev, property, prop, checkonly, ARRAY_SIZE(priv->strip_actions), priv->strip_actions, priv->strip_keys);
 	else if (property == prop_wheel_buttons)
 		return wcmSetActionsProperty(dev, property, prop, checkonly, ARRAY_SIZE(priv->wheel_actions), priv->wheel_actions, priv->wheel_keys);
-	else if (property == prop_cursorprox)
-	{
-		CARD32 value;
-
-		if (prop->size != 1 || prop->format != 32)
-			return BadValue;
-
-		if (!IsCursor (priv))
-			return BadValue;
-
-		value = *(CARD32*)prop->data;
-
-		if (value > common->wcmMaxDist)
-			return BadValue;
-
-		if (!checkonly)
-			common->wcmCursorProxoutDist = value;
-	} else if (property == prop_threshold)
+	else if (property == prop_threshold)
 	{
 		const INT32 MAXIMUM = wcmInternalToUserPressure(pInfo, priv->maxCurve);
 		INT32 value;

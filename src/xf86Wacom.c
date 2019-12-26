@@ -213,15 +213,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min = 0;
 	max = 1;
 
-	if (IsCursor(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_RZ);
-		min = MIN_ROTATION;
-		max = MIN_ROTATION + MAX_ROTATION_RANGE - 1;
-	}
-
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
 
 	/* fifth valuator: tilt-y, cursor:throttle, pad:strip-y */
 	index = 4;
@@ -231,15 +223,7 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	min = 0;
 	max = 1;
 
-	if (IsCursor(priv))
-	{
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_THROTTLE);
-		min = -1023;
-		max = 1023;
-	}
-
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
 
 	/* sixth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
 	index = 5;

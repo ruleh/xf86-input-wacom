@@ -1155,32 +1155,8 @@ static void usbParseBTNEvent(WacomCommonPtr common,
 static int deviceTypeFromEvent(WacomCommonPtr common, int type, int code, int value)
 {
 	if (type == EV_KEY) {
-		switch(code) {
-			case BTN_TOOL_PEN:
-			case BTN_TOOL_PENCIL:
-			case BTN_TOOL_BRUSH:
-			case BTN_TOOL_AIRBRUSH:
-				return STYLUS_ID;
-
-			case BTN_TOOL_MOUSE:
-			case BTN_TOOL_LENS:
-				return CURSOR_ID;
-
-			case BTN_TOOL_FINGER:
-				return TOUCH_ID;
-
-			case BTN_TOOL_RUBBER:
-				return ERASER_ID;
-
-			case BTN_TOOL_DOUBLETAP:
-			case BTN_TOOL_TRIPLETAP:
-				return TOUCH_ID;
-
-			case BTN_TOUCH:
-				break;
-		}
-	}
-	else if (type == EV_ABS) {
+		return TOUCH_ID;
+	} else if (type == EV_ABS) {
 		switch (code) {
 			case ABS_MT_SLOT:
 			case ABS_MT_TRACKING_ID:
@@ -1290,22 +1266,6 @@ static int usbInitToolType(WacomCommonPtr common, int fd,
 	return device_type;
 }
 
-/**
- * Check if the tool is a stylus/eraser/cursor and in-prox or not.
- *
- * @param device_type The tool type stored in wcmChannel
- * @param proximity The tool's proximity state
-
- * @return True if stylus/eraser/cursor is in-prox; False otherwise.
- */
-static Bool usbIsTabletToolInProx(int device_type, int proximity)
-{
-	Bool is_tablet_tool = (device_type == STYLUS_ID) ||
-				(device_type == CURSOR_ID) ||
-				(device_type == ERASER_ID);
-	return (is_tablet_tool && proximity);
-}
-
 static void usbDispatchEvents(InputInfoPtr pInfo)
 {
 	int i, c;
@@ -1399,12 +1359,8 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		}
 		else if (event->type == EV_KEY)
 		{
-			/* Button events can be from puck or expresskeys */
-			int btn_channel = (ds->device_type == CURSOR_ID) ?
-					   channel : PAD_CHANNEL;
-
 			usbParseKeyEvent(common, event, channel);
-			usbParseBTNEvent(common, event, btn_channel);
+			usbParseBTNEvent(common, event, PAD_CHANNEL);
 		}
 	} /* next event */
 

@@ -404,19 +404,6 @@ static void wcmHotplugSerials(InputInfoPtr pInfo, const char *basename)
 	while (ser)
 	{
 		xf86Msg(X_INFO, "%s: hotplugging serial %d.\n", pInfo->name, ser->serial);
-
-		if (wcmIsAValidType(pInfo, "stylus") &&
-		    (ser->typeid & STYLUS_ID))
-			wcmQueueHotplug(pInfo, basename, "stylus", ser->serial);
-
-		if (wcmIsAValidType(pInfo, "eraser") &&
-		    (ser->typeid & ERASER_ID))
-			wcmQueueHotplug(pInfo, basename, "eraser", ser->serial);
-
-		if (wcmIsAValidType(pInfo, "cursor") &&
-		    (ser->typeid & CURSOR_ID))
-			wcmQueueHotplug(pInfo, basename, "cursor", ser->serial);
-
 		ser = ser->next;
 	}
 }
@@ -541,20 +528,6 @@ int wcmParseSerials (InputInfoPtr pInfo)
 				ser->serial = serial;
 
 				ser->typeid = STYLUS_ID | ERASER_ID; /*Default to both tools*/
-			}
-
-			if (nmatch >= 2)
-			{
-				xf86Msg(X_CONFIG, "%s: Tool %d has type %s.\n",
-					pInfo->name, serial, type);
-				if ((strcmp(type, "pen") == 0) || (strcmp(type, "airbrush") == 0))
-					ser->typeid = STYLUS_ID | ERASER_ID;
-				else if (strcmp(type, "artpen") == 0)
-					ser->typeid = STYLUS_ID;
-				else if (strcmp(type, "cursor") == 0)
-					ser->typeid = CURSOR_ID;
-				else    xf86Msg(X_CONFIG, "%s: Invalid type %s, defaulting to pen.\n",
-					pInfo->name, type);
 			}
 
 			if (nmatch == 3)
@@ -708,15 +681,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	/*Serials of tools we want hotpluged*/
 	if (wcmParseSerials (pInfo) != 0)
 		goto error;
-
-	if (IsCursor(priv))
-	{
-		common->wcmCursorProxoutDist = xf86SetIntOption(pInfo->options, "CursorProx", 0);
-		if (common->wcmCursorProxoutDist < 0 ||
-				common->wcmCursorProxoutDist > common->wcmMaxDist)
-			xf86Msg(X_CONFIG, "%s: CursorProx invalid %d \n",
-				pInfo->name, common->wcmCursorProxoutDist);
-	}
 
 	priv->topX = xf86SetIntOption(pInfo->options, "TopX", 0);
 	priv->topY = xf86SetIntOption(pInfo->options, "TopY", 0);

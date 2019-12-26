@@ -428,7 +428,7 @@ static void sendWheelStripEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
 	/* emulate events for relative wheel */
 	delta = getScrollDelta(ds->relwheel, 0, 0, 0);
 	idx = getWheelButton(delta, WHEEL_REL_UP, WHEEL_REL_DN);
-	if (idx >= 0 && (IsCursor(priv) || IsPad(priv)) && priv->oldState.proximity == ds->proximity)
+	if (idx >= 0 && IsPad(priv) && priv->oldState.proximity == ds->proximity)
 	{
 		DBG(10, priv, "Relative wheel scroll delta = %d\n", delta);
 		sendWheelStripEvent(priv->wheel_keys[idx], ds, ARRAY_SIZE(priv->wheel_keys[idx]),
@@ -588,15 +588,8 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 		valuators[0] -= priv->oldState.x;
 		valuators[1] -= priv->oldState.y;
 		valuators[2] -= priv->oldState.pressure;
-		if (IsCursor(priv))
-		{
-			valuators[3] -= priv->oldState.rotation;
-			valuators[4] -= priv->oldState.throttle;
-		} else
-		{
-			valuators[3] -= priv->oldState.tiltx;
-			valuators[4] -= priv->oldState.tilty;
-		}
+		valuators[3] -= priv->oldState.tiltx;
+		valuators[4] -= priv->oldState.tilty;
 		valuators[5] -= priv->oldState.abswheel;
 		valuators[6] -= priv->oldState.abswheel2;
 	}
@@ -705,16 +698,8 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	if (ds->proximity)
 		wcmRotateAndScaleCoordinates(pInfo, &x, &y);
 
-	if (IsCursor(priv))
-	{
-		v3 = ds->rotation;
-		v4 = ds->throttle;
-	}
-	else  /* Intuos styli have tilt */
-	{
-		v3 = tx;
-		v4 = ty;
-	}
+	v3 = tx;
+	v4 = ty;
 
 	v5 = ds->abswheel;
 	v6 = ds->abswheel2;
@@ -898,24 +883,6 @@ static Bool check_arbitrated_control(InputInfoPtr pInfo, WacomDeviceStatePtr ds)
 	if (active == NULL || active->oldState.device_id == ds->device_id) {
 		DBG(11, priv, "Event from active device; maintaining pointer control.\n");
 		return TRUE;
-	}
-	else if (IsCursor(active)) {
-		/* Cursor devices are often left idle in range, so allow other devices
-		 * to grab control if the tool has not been used for some time.
-		 */
-		Bool yield = (ds->time - active->oldState.time > 100) && (active->oldState.buttons == 0);
-		DBG(6, priv, "Currently-active cursor %s idle; %s pointer control.\n",
-		    yield ? "is" : "is not", yield ? "yielding" : "not yielding");
-		return yield;
-	}
-	else if (IsCursor(priv)) {
-		/* An otherwise idle cursor may still occasionally jitter and send
-		 * events while the user is actively using other tools or touching
-		 * the device. Do not allow the cursor to grab control in this
-		 * particular case.
-		 */
-		DBG(6, priv, "Event from non-active cursor; not yielding pointer control.\n");
-		return FALSE;
 	}
 	else {
 		/* Non-touch input has priority over touch in general */
@@ -1249,10 +1216,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 	if (suppress == SUPPRESS_ALL)
 		return;
 
-	/* Store cursor hardware prox for next use */
-	if (IsCursor(priv))
-		priv->oldCursorHwProx = ds->proximity;
-
 	/* User-requested filtering comes next */
 
 	/* User-requested transformations come last */
@@ -1278,46 +1241,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 			/* send other events, such as button/wheel */
 			filtered.x = priv->oldState.x;
 			filtered.y = priv->oldState.y;
-		}
-	}
-
-	/* force out-prox when distance is outside wcmCursorProxoutDist for pucks */
-	if (IsCursor(priv))
-	{
-		/* Assume the the user clicks the puck buttons while
-		 * it is resting on the tablet. This works for both
-		 * tablets that have a normal distance scale (protocol
-		 * 5) as well as those with an inverted scale (protocol
-		 * 4 for many many kernel versions).
-		 */
-		if (filtered.buttons)
-			common->wcmMaxCursorDist = filtered.distance;
-
-		DBG(10, common, "Distance over"
-				" the tablet: %d, ProxoutDist: %d current"
-				" min/max %d hard prox: %d\n",
-				filtered.distance,
-				common->wcmCursorProxoutDist,
-				common->wcmMaxCursorDist,
-				ds->proximity);
-
-		if (common->wcmMaxCursorDist) {
-			if (priv->oldState.proximity)
-			{
-				if (abs(filtered.distance - common->wcmMaxCursorDist)
-						> common->wcmCursorProxoutDist)
-					filtered.proximity = 0;
-			}
-			/* once it is out. Don't let it in until a hard in */
-			/* or it gets inside wcmCursorProxoutDist */
-			else
-			{
-				if (abs(filtered.distance - common->wcmMaxCursorDist) >
-						common->wcmCursorProxoutDist && ds->proximity)
-					return;
-				if (!ds->proximity)
-					return;
-			}
 		}
 	}
 	wcmSendEvents(pInfo, &filtered);
