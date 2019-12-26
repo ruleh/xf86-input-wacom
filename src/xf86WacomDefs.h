@@ -134,17 +134,9 @@ struct _WacomModel
 
 /* these device IDs are reported through ABS_MISC for Protocol 4 devices */
 #define DEVICE_ID(flags) ((flags) & 0xff)
-#define STYLUS_DEVICE_ID	0x02
 #define TOUCH_DEVICE_ID		0x03
-#define CURSOR_DEVICE_ID	0x06
-#define ERASER_DEVICE_ID	0x0A
-#define PAD_DEVICE_ID		0x0F
 
-#define STYLUS_ID		0x00000001
 #define TOUCH_ID		0x00000002
-#define CURSOR_ID		0x00000004
-#define ERASER_ID		0x00000008
-#define PAD_ID			0x00000010
 
 /* Each tablet may have one or more of the following
  * features */

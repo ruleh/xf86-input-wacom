@@ -241,15 +241,6 @@ static void storeRawSample(WacomCommonPtr common, WacomChannelPtr pChannel,
 			fs->x[i]= ds->x;
 			fs->y[i]= ds->y;
 		}
-		if (HANDLE_TILT(common) && (ds->device_type == STYLUS_ID ||
-					    ds->device_type == ERASER_ID))
-		{
-			for (i=common->wcmRawSample - 1; i>=0; i--)
-			{
-				fs->tiltx[i] = ds->tiltx;
-				fs->tilty[i] = ds->tilty;
-			}
-		}
 		++fs->npoints;
 	} else {
 		/* Shift window and insert latest sample */
@@ -260,17 +251,6 @@ static void storeRawSample(WacomCommonPtr common, WacomChannelPtr pChannel,
 		}
 		fs->x[0] = ds->x;
 		fs->y[0] = ds->y;
-		if (HANDLE_TILT(common) && (ds->device_type == STYLUS_ID ||
-					    ds->device_type == ERASER_ID))
-		{
-			for (i=common->wcmRawSample - 1; i>0; i--)
-			{
-				fs->tiltx[i]= fs->tiltx[i-1];
-				fs->tilty[i]= fs->tilty[i-1];
-			}
-			fs->tiltx[0] = ds->tiltx;
-			fs->tilty[0] = ds->tilty;
-		}
 		if (fs->npoints < common->wcmRawSample)
 			++fs->npoints;
 	}
@@ -305,21 +285,6 @@ int wcmFilterCoord(WacomCommonPtr common, WacomChannelPtr pChannel,
 
 	ds->x = wcmFilterAverage(state->x, common->wcmRawSample);
 	ds->y = wcmFilterAverage(state->y, common->wcmRawSample);
-	if (HANDLE_TILT(common) && (ds->device_type == STYLUS_ID ||
-				    ds->device_type == ERASER_ID))
-	{
-		ds->tiltx = wcmFilterAverage(state->tiltx, common->wcmRawSample);
-		if (ds->tiltx > common->wcmTiltMaxX)
-			ds->tiltx = common->wcmTiltMaxX;
-		else if (ds->tiltx < common->wcmTiltMinX)
-			ds->tiltx = common->wcmTiltMinX;
-
-		ds->tilty = wcmFilterAverage(state->tilty, common->wcmRawSample);
-		if (ds->tilty > common->wcmTiltMaxY)
-			ds->tilty = common->wcmTiltMaxY;
-		else if (ds->tilty < common->wcmTiltMinY)
-			ds->tilty = common->wcmTiltMinY;
-	}
 
 	return 0; /* lookin' good */
 }

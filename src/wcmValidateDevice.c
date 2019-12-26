@@ -519,17 +519,6 @@ int wcmParseSerials (InputInfoPtr pInfo)
 				free(ser);
 				return 1;
 			}
-
-			if (nmatch >= 1)
-			{
-				xf86Msg(X_CONFIG, "%s: Tool serial %d found.\n",
-					pInfo->name, serial);
-
-				ser->serial = serial;
-
-				ser->typeid = STYLUS_ID | ERASER_ID; /*Default to both tools*/
-			}
-
 			if (nmatch == 3)
 			{
 				xf86Msg(X_CONFIG, "%s: Tool %d is named %s.\n",

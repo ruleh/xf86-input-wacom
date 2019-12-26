@@ -906,40 +906,6 @@ static void usbParseKeyEvent(WacomCommonPtr common,
 	 */
 	switch (event->code)
 	{
-		case BTN_TOOL_PEN:
-		case BTN_TOOL_PENCIL:
-		case BTN_TOOL_BRUSH:
-		case BTN_TOOL_AIRBRUSH:
-			/* V5 tools use ABS_MISC to report device_id */
-			ds->device_id = STYLUS_DEVICE_ID;
-			ds->proximity = (event->value != 0);
-			DBG(6, common,
-			    "USB stylus detected %x\n",
-			    event->code);
-			break;
-
-		case BTN_TOOL_RUBBER:
-			/* V5 tools use ABS_MISC to report device_id */
-			ds->device_id = ERASER_DEVICE_ID;
-			ds->proximity = (event->value != 0);
-			DBG(6, common,
-			    "USB eraser detected %x (value=%d)\n",
-			    event->code, event->value);
-			break;
-
-		case BTN_TOOL_MOUSE:
-		case BTN_TOOL_LENS:
-			DBG(6, common,
-			    "USB mouse detected %x (value=%d)\n",
-			    event->code, event->value);
-			/* V5 tools use ABS_MISC to report device_id */
-			ds->device_id = CURSOR_DEVICE_ID;
-			ds->proximity = (event->value != 0);
-			break;
-
-               case BTN_TOUCH:
-			break;
-
 		case BTN_TOOL_FINGER:
 			/* A pad tool */
 			/* fall through */
@@ -1219,15 +1185,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 			usbParseBTNEvent(common, event, PAD_CHANNEL);
 		}
 	} /* next event */
-
-	/* DTF720 and DTF720a don't support eraser */
-	if (((common->tablet_id == 0xC0) || (common->tablet_id == 0xC2)) && 
-		(ds->device_type == ERASER_ID)) 
-	{
-		DBG(10, common,
-			"DTF 720 doesn't support eraser ");
-		return;
-	}
 
 	/* verify we have minimal data when entering prox */
 	if (ds->proximity && !dslast.proximity) {
