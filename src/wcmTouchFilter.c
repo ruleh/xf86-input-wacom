@@ -154,7 +154,7 @@ wcmFingerMultitouch(WacomDevicePtr priv, int contact_id) {
 	Bool prox = FALSE;
 	int i;
 
-	if (lag_mode && TabletHasFeature(priv->common, WCM_LCD)) {
+	if (lag_mode) {
 		/* wcmSingleFingerPress triggers a button press as
 		 * soon as a single finger appears. ensure we release
 		 * that button before getting too far along
@@ -351,10 +351,6 @@ static void wcmSingleFingerPress(WacomDevicePtr priv)
 	Bool secondInProx = secondChannel && secondChannel->valid.states[0].proximity;
 
 	DBG(10, priv, "\n");
-
-	/* This gesture is only valid on touchscreens. */
-	if (!TabletHasFeature(priv->common, WCM_LCD))
-		return;
 
 	if (!firstChannel)
 		return;
@@ -556,10 +552,7 @@ ret:
 	/* Send multitouch data to X if appropriate */
 	if (!common->wcmGesture) {
 		if (common->wcmGestureMode == GESTURE_NONE_MODE) {
-			if (TabletHasFeature(common, WCM_LCD))
-				common->wcmGestureMode = GESTURE_LAG_MODE;
-			else if (ds[1].proximity)
-				common->wcmGestureMode = GESTURE_LAG_MODE;
+			common->wcmGestureMode = GESTURE_LAG_MODE;
 		}
 
 		if (common->wcmGestureMode == GESTURE_LAG_MODE ||

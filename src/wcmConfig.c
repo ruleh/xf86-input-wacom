@@ -150,8 +150,7 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 	{
 		int flags = TOUCH_ID;
 
-		if (TabletHasFeature(priv->common, WCM_LCD))
-			flags |= ABSOLUTE_FLAG;
+		flags |= ABSOLUTE_FLAG;
 
 		priv->flags = flags;
 		pInfo->type_name = WACOM_PROP_XI_TYPE_TOUCH;

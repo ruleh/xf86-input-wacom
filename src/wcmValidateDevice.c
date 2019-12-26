@@ -196,7 +196,6 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 
 		case 0x34D: /* MobileStudio Pro 13 */
 		case 0x34E: /* MobileStudio Pro 13 */
-			TabletSetFeature(priv->common, WCM_LCD);
 			/* fall through */
 
 		case 0x357: /* Intuos Pro 2 M */
@@ -260,7 +259,6 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 		case 0xC7:  /* DTU1931 */
 		case 0xCE:  /* DTU2231 */
 		case 0xF0:  /* DTU1631 */
-			TabletSetFeature(priv->common, WCM_LCD);
 			break;
 
 		/* tablets support menu strips */
@@ -270,7 +268,6 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 		case 0xCC:  /* CinitqV5 */
 		case 0xFA:  /* Cintiq 22HD */
 		case 0x5B:  /* Cintiq 22HDT Pen */
-			TabletSetFeature(priv->common, WCM_LCD);
 			/* fall through */
 		case 0xB0:  /* I3 */
 		case 0xB1:  /* I3 */
@@ -303,7 +300,6 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 		case 0x97: /* TPC */
 		case 0x9F: /* TPC */
 		case 0xEF: /* TPC */
-			TabletSetFeature(priv->common, WCM_TPC);
 			break;
 
 		case 0x304:/* Cintiq 13HD */
@@ -347,20 +343,9 @@ int wcmDeviceTypeKeys(InputInfoPtr pInfo)
 		case 0x382:/* DTK-2451 */
 		case 0x37D:/* DTH-2452 */
 		case 0x37E:/* DTH-2452 Touch */
-			TabletSetFeature(priv->common, WCM_LCD);
 			break;
 	}
 
-#ifdef INPUT_PROP_DIRECT
-	{
-		int rc;
-		unsigned long prop[NBITS(INPUT_PROP_MAX)] = {0};
-
-		rc = ioctl(pInfo->fd, EVIOCGPROP(sizeof(prop)), prop);
-		if (rc >= 0 && ISBITSET(prop, INPUT_PROP_DIRECT))
-			TabletSetFeature(priv->common, WCM_LCD);
-	}
-#endif
 	if (ISBITSET(common->wcmKeys, BTN_TOOL_PEN))
 		TabletSetFeature(priv->common, WCM_PEN);
 
@@ -792,7 +777,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	char            *s;
 	int		i;
 	WacomToolPtr    tool = NULL;
-	int		tpc_button_is_on;
 
 	/* Optional configuration */
 	s = xf86SetStrOption(pInfo->options, "Mode", NULL);
@@ -952,16 +936,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	if (xf86SetBoolOption(pInfo->options, "ButtonsOnly", 0))
 		priv->flags |= BUTTONS_ONLY_FLAG;
 
-	/* TPCButton on for Tablet PC by default */
-	tpc_button_is_on = xf86SetBoolOption(pInfo->options, "TPCButton",
-					TabletHasFeature(common, WCM_TPC));
-
-	if (is_primary || IsStylus(priv))
-		common->wcmTPCButton = tpc_button_is_on;
-	else if (tpc_button_is_on != common->wcmTPCButton)
-		xf86Msg(X_WARNING, "%s: TPCButton option can only be set "
-			"by stylus.\n", pInfo->name);
-
 	/* a single or double touch device */
 	if (TabletHasFeature(common, WCM_1FGT) ||
 	    TabletHasFeature(common, WCM_2FGT))
@@ -1014,13 +988,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 		common->wcmPressureRecalibration
 			= xf86SetBoolOption(pInfo->options,
 					    "PressureRecalibration", 1);
-	}
-
-	/* Swap stylus buttons 2 and 3 for Tablet PCs */
-	if (TabletHasFeature(common, WCM_TPC) && IsStylus(priv))
-	{
-		priv->button_default[1] = 3;
-		priv->button_default[2] = 2;
 	}
 
 	for (i=0; i<WCM_MAX_BUTTONS; i++)

@@ -71,19 +71,16 @@ static int usbChooseChannel(WacomCommonPtr common, int device_type, unsigned int
 		usbProbeKeys
 	};
 
-#define DEFINE_MODEL(mname, identifier, protocol) \
-static struct _WacomModel mname =		\
-{						\
-	.name = identifier,			\
-	.Initialize = usbInitProtocol##protocol,\
-	.GetResolution = NULL,			\
-	.GetRanges = usbWcmGetRanges,		\
-	.Start = usbStart,			\
-	.Parse = usbParse,			\
-	.DetectConfig = usbDetectConfig,	\
-}
-
-DEFINE_MODEL(usbUnknown,	"Unknown USB",		5);
+static struct _WacomModel usbUnknown =		
+{						
+	.name = "Unknown USB",			
+	.Initialize = usbInitProtocol5,
+	.GetResolution = NULL,			
+	.GetRanges = usbWcmGetRanges,		
+	.Start = usbStart,			
+	.Parse = usbParse,			
+	.DetectConfig = usbDetectConfig,	
+};
 
 /*****************************************************************************
  * usbDetect --
@@ -1060,8 +1057,7 @@ static void usbParseKeyEvent(WacomCommonPtr common,
                case BTN_TOUCH:
 			/* 1FG USB touchscreen */
 			if (!TabletHasFeature(common, WCM_PEN) &&
-				TabletHasFeature(common, WCM_1FGT) &&
-				TabletHasFeature(common, WCM_LCD))
+				TabletHasFeature(common, WCM_1FGT)) 
 			{
 				DBG(6, common,
 				    "USB 1FG Touch detected %x (value=%d)\n",
@@ -1226,8 +1222,7 @@ static int deviceTypeFromEvent(WacomCommonPtr common, int type, int code, int va
 
 			case BTN_TOUCH:
 				if (!TabletHasFeature(common, WCM_PEN) &&
-				    TabletHasFeature(common, WCM_1FGT) &&
-				    TabletHasFeature(common, WCM_LCD))
+				    TabletHasFeature(common, WCM_1FGT))
 					return TOUCH_ID;
 				else
 					break;
@@ -1543,17 +1538,6 @@ static void usbGenericTouchscreenQuirks(unsigned long *keys,
 					unsigned long *abs,
 					WacomCommonPtr common)
 {
-	/* USB Tablet PC single finger touch devices do not emit
-	 * BTN_TOOL_FINGER since it is a touchscreen device.
-	 */
-	if (ISBITSET(keys, BTN_TOUCH) &&
-			!ISBITSET(keys, BTN_TOOL_FINGER) &&
-			!ISBITSET(keys, BTN_TOOL_PEN))
-	{
-		SETBIT(keys, BTN_TOOL_FINGER); /* 1FGT */
-		TabletSetFeature(common, WCM_TPC);
-	}
-
 	/* Serial Tablet PC two finger touch devices do not emit
 	 * BTN_TOOL_DOUBLETAP since they are not touchpads.
 	 */

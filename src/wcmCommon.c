@@ -1061,7 +1061,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 		 * When using XI 2.2 multitouch events don't do common dispatching
 		 * for direct touch devices
 		 */
-		if (!common->wcmGesture && TabletHasFeature(common, WCM_LCD))
+		if (!common->wcmGesture)
 			return;
 #endif
 	}

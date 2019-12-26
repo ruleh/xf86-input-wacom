@@ -162,11 +162,6 @@ struct _WacomModel
 					      1 and 2) */
 #define WCM_ROTATION		0x00000080 /* Needs to convert mouse tool
 					      tilt to rotation */
-#define WCM_LCD			0x00000100 /* Cintiqs and other display
-					      tablets */
-#define WCM_TPC			(0x00000200 | WCM_LCD) /* TabletPC (special
-							  button handling,
-							  always an LCD) */
 #define WCM_PENTOUCH		0x00000400 /* Tablet supports pen and touch */
 #define WCM_DUALRING		0x00000800 /* Tablet has two touch rings */
 #define TabletHasFeature(common, feature) MaskIsSet((common)->tablet_type, (feature))
