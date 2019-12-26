@@ -313,6 +313,9 @@ static void wcmSingleFingerTap(WacomDevicePtr priv)
 	WacomCommonPtr common = priv->common;
 	WacomDeviceState ds[2] = {}, dsLast[2] = {};
 
+	if (!common->wcmGesture)
+		return;
+
 	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
 	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
 
@@ -552,7 +555,7 @@ ret:
 	/* Send multitouch data to X if appropriate */
 	if (!common->wcmGesture) {
 		if (common->wcmGestureMode == GESTURE_NONE_MODE) {
-			common->wcmGestureMode = GESTURE_LAG_MODE;
+			common->wcmGestureMode = GESTURE_MULTITOUCH_MODE;
 		}
 
 		if (common->wcmGestureMode == GESTURE_LAG_MODE ||
