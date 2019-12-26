@@ -142,9 +142,7 @@ wcmSetType(InputInfoPtr pInfo, const char *type)
 
 	if (xf86NameCmp(type, "touch") == 0)
 	{
-		int flags = TOUCH_ID;
-
-		flags |= ABSOLUTE_FLAG;
+		int flags = ABSOLUTE_FLAG;
 
 		priv->flags = flags;
 		pInfo->type_name = WACOM_PROP_XI_TYPE_TOUCH;

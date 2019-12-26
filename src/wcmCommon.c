@@ -570,7 +570,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 #ifdef DEBUG
 	int is_button = !!(ds->buttons);
 #endif
-	int type = ds->device_type;
 	int id = ds->device_id;
 	unsigned int serial = ds->serial_num;
 	int x = ds->x;
@@ -648,7 +647,7 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		valuators[6] = v6;
 
 	/* don't move the cursor if in gesture mode (except drag mode) */
-	if ((type != TOUCH_ID) || wcmTouchNeedSendEvents(priv->common))
+	if (wcmTouchNeedSendEvents(priv->common))
 		wcmSendNonPadEvents(pInfo, ds, 0, priv->naxes, valuators);
 
 	if (ds->proximity)
@@ -756,13 +755,10 @@ static WacomToolPtr findTool(const WacomCommonPtr common,
 	 * specified serial exists) that is used for this event */
 	for (tool = common->wcmTool; tool; tool = tool->next)
 	{
-		if (tool->typeid == ds->device_type)
-		{
-			if (tool->serial == ds->serial_num)
-				break;
-			else if (!tool->serial)
-				tooldefault = tool;
-		}
+		if (tool->serial == ds->serial_num)
+			break;
+		else if (!tool->serial)
+			tooldefault = tool;
 	}
 
 	/* Use default tool (serial == 0) if no specific was found */
@@ -823,12 +819,11 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	ds = *pState;
 
 	DBG(10, common,
-		"c=%d i=%d t=%d s=%u x=%d y=%d b=%d "
+		"c=%d i=%d s=%u x=%d y=%d b=%d "
 		"p=%d rz=%d tx=%d ty=%d aw=%d aw2=%d rw=%d "
 		"t=%d px=%d st=%d cs=%d \n",
 		channel,
 		ds.device_id,
-		ds.device_type,
 		ds.serial_num,
 		ds.x, ds.y, ds.buttons,
 		ds.pressure, ds.rotation, ds.tiltx,
@@ -840,8 +835,8 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	tool = findTool(common, &ds);
 	if (!tool || !tool->device)
 	{
-		DBG(11, common, "no device matches with id=%d, serial=%u\n",
-		    ds.device_type, ds.serial_num);
+		DBG(11, common, "no device matches with serial=%u\n",
+		    ds.serial_num);
 		return;
 	}
 
@@ -854,7 +849,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 
 	pInfo = tool->device;
 	priv = pInfo->private;
-	DBG(11, common, "tool id=%d for %s\n", ds.device_type, pInfo->name);
+	DBG(11, common, "tool for %s\n", pInfo->name);
 
 	/* JEJ - Do not move this code without discussing it with me.
 	 * The device state is invariant of any filtering performed below.
@@ -884,7 +879,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 		return;
 	}
 
-	if ((ds.device_type == TOUCH_ID) && common->wcmTouch)
+	if (common->wcmTouch)
 	{
 		wcmGestureFilter(priv, ds.serial_num - 1);
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 16
@@ -898,8 +893,7 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	}
 
 	/* For touch, only first finger moves the cursor */
-	if ((common->wcmTouch && ds.device_type == TOUCH_ID && ds.serial_num == 1) ||
-	    (ds.device_type != TOUCH_ID))
+	if (common->wcmTouch && ds.serial_num == 1)
 		commonDispatchDevice(pInfo, pChannel);
 }
 
@@ -1056,19 +1050,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 	enum WacomSuppressMode suppress;
 	int raw_pressure = 0;
 
-	/* device_type should have been retrieved and set in the respective
-	 * models, wcmISDV4.c or wcmUSB.c. Once it comes here, something
-	 * must have been wrong. Ignore the events.
-	 */
-	if (!ds->device_type)
-	{
-		DBG(11, common, "no device type matches with"
-				" serial=%u\n", ds->serial_num);
-		return;
-	}
-
-	DBG(10, common, "device type = %d\n", ds->device_type);
-
 	filtered = pChannel->valid.state;
 
 	/* Device transformations come first */
@@ -1197,7 +1178,6 @@ void wcmSoftOutEvent(InputInfoPtr pInfo)
 	WacomDeviceState out = OUTPROX_STATE;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 
-	out.device_type = DEVICE_ID(priv->flags);
 	out.device_id = TOUCH_DEVICE_ID;
 	DBG(2, priv->common, "send a soft prox-out\n");
 	wcmSendEvents(pInfo, &out);

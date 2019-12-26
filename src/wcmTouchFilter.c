@@ -66,7 +66,7 @@ static WacomChannelPtr getContactNumber(WacomCommonPtr common, int num)
 	{
 		WacomChannelPtr channel = common->wcmChannel+i;
 		WacomDeviceState state  = channel->valid.state;
-		if (state.device_type == TOUCH_ID && state.serial_num == num + 1)
+		if (state.serial_num == num + 1)
 			return channel;
 	}
 
@@ -165,8 +165,6 @@ wcmFingerMultitouch(WacomDevicePtr priv, int contact_id) {
 	for (i = 0; i < MAX_CHANNELS; i++) {
 		WacomChannelPtr channel = priv->common->wcmChannel+i;
 		WacomDeviceState state  = channel->valid.state;
-		if (state.device_type != TOUCH_ID)
-			continue;
 
 		if (lag_mode || state.serial_num == contact_id + 1) {
 			wcmSendTouchEvent(priv, channel, lag_mode);

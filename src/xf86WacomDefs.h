@@ -136,8 +136,6 @@ struct _WacomModel
 #define DEVICE_ID(flags) ((flags) & 0xff)
 #define TOUCH_DEVICE_ID		0x03
 
-#define TOUCH_ID		0x00000002
-
 /* Each tablet may have one or more of the following
  * features */
 #define WCM_PEN			0x00000001 /* Tablet supports pens */
@@ -194,7 +192,6 @@ struct _WacomDeviceState
 {
 	InputInfoPtr pInfo;
 	int device_id;		/* tool id reported from the physical device */
-	int device_type;
 	unsigned int serial_num;
 	int x;
 	int y;

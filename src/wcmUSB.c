@@ -32,7 +32,6 @@
 
 typedef struct {
 	int wcmLastToolSerial;
-	int wcmDeviceType;
 	Bool wcmUseMT;
 	int wcmMTChannel;
 	int wcmEventCnt;
@@ -60,7 +59,7 @@ static void usbParseSynEvent(InputInfoPtr pInfo,
 static void usbParseMscEvent(InputInfoPtr pInfo,
 			     const struct input_event *event);
 static void usbDispatchEvents(InputInfoPtr pInfo);
-static int usbChooseChannel(WacomCommonPtr common, int device_type, unsigned int serial);
+static int usbChooseChannel(WacomCommonPtr common, unsigned int serial);
 
 	WacomDeviceClass gWacomUSBDevice =
 	{
@@ -481,11 +480,10 @@ static int usbParse(InputInfoPtr pInfo, const unsigned char* data, int len)
  * tracked concurrently by driver.
  *
  * @param[in] common
- * @param[in] device_type  Type of tool (e.g. STYLUS_ID, TOUCH_ID, PAD_ID)
  * @param[in] serial       Serial number of tool
  * @return                 Channel number to track the tool's state
  */
-static int usbChooseChannel(WacomCommonPtr common, int device_type, unsigned int serial)
+static int usbChooseChannel(WacomCommonPtr common, unsigned int serial)
 {
 	/* figure out the channel to use based on serial number */
 	int i, channel = -1;
@@ -500,7 +498,6 @@ static int usbChooseChannel(WacomCommonPtr common, int device_type, unsigned int
 		for (i=0; i<MAX_CHANNELS; i++)
 		{
 			if (common->wcmChannel[i].work.proximity &&
-			    common->wcmChannel[i].work.device_type == device_type &&
 			    common->wcmChannel[i].work.serial_num == serial)
 			{
 				channel = i;
@@ -690,29 +687,13 @@ static int usbFilterEvent(WacomCommonPtr common, struct input_event *event)
 		}
 		else if (event->type == EV_ABS)
 		{
-			if (private->wcmDeviceType == TOUCH_ID)
+			/* filter ST for MT */
+			switch(event->code)
 			{
-				/* filter ST for MT */
-				switch(event->code)
-				{
-					case ABS_X:
-					case ABS_Y:
-					case ABS_PRESSURE:
-						return 1;
-				}
-			}
-			else
-			{
-				/* filter MT for pen */
-				switch(event->code)
-				{
-					case ABS_MT_SLOT:
-					case ABS_MT_TRACKING_ID:
-					case ABS_MT_POSITION_X:
-					case ABS_MT_POSITION_Y:
-					case ABS_MT_PRESSURE:
-						return 1;
-				}
+				case ABS_X:
+				case ABS_Y:
+				case ABS_PRESSURE:
+					return 1;
 			}
 		}
 	}
@@ -855,7 +836,7 @@ static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
 		case ABS_MT_SLOT:
 			if (event->value >= 0) {
 				int serial = event->value + 1;
-				private->wcmMTChannel = usbChooseChannel(common, TOUCH_ID, serial);
+				private->wcmMTChannel = usbChooseChannel(common, serial);
 				if (private->wcmMTChannel < 0)
 					return;
 				ds = &common->wcmChannel[private->wcmMTChannel].work;
@@ -866,7 +847,6 @@ static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
 		case ABS_MT_TRACKING_ID:
 			ds->proximity = (event->value != -1);
 			/* set this here as type for this channel doesn't get set in usbDispatchEvent() */
-			ds->device_type = TOUCH_ID;
 			ds->device_id = TOUCH_DEVICE_ID;
 			ds->sample = (int)GetTimeInMillis();
 			break;
@@ -997,97 +977,6 @@ static void usbParseBTNEvent(WacomCommonPtr common,
 	channel->dirty |= change;
 }
 
-/**
- * Translates an event code from the kernel (e.g. type: EV_ABS code: ABS_MISC value: STYLUS_DEVICE_ID)
- * into the corresponding device type for the driver (e.g. STYLUS_ID).
- *
- * @param[in] common
- * @param[in] type      Linux input tool type (e.g. EV_KEY)
- * @param[in] code      Linux input tool code (e.g. BTN_STYLUS_PEN)
- * @param[in] value     Linux input tool value (e.g. STYLUS_DEVICE_ID)
- * @return              Wacom device ID (e.g. STYLUS_ID) or 0 if no match.
- */
-static int deviceTypeFromEvent(WacomCommonPtr common, int type, int code, int value)
-{
-	if (type == EV_KEY) {
-		return TOUCH_ID;
-	} else if (type == EV_ABS) {
-		switch (code) {
-			case ABS_MT_SLOT:
-			case ABS_MT_TRACKING_ID:
-				return TOUCH_ID;
-		}
-	}
-
-	return 0;
-}
-
-/**
- * Queries the kernel through EVIOCGKEY for the latest device type
- * information. The result is the first tool type (e.g. STYLUS_ID)
- * found associated with the in-prox tool.
- *
- * @param[in] common
- * @return            A tool type (e.g. STYLUS_ID) associated with the in-prox tool
- */
-static int refreshDeviceType(WacomCommonPtr common, int fd)
-{
-	int device_type = 0;
-	unsigned long keys[NBITS(KEY_MAX)] = { 0 };
-	int rc = ioctl(fd, EVIOCGKEY(sizeof(keys)), keys);
-	int i;
-
-	if (rc == -1) {
-		xf86Msg(X_ERROR, "%s: failed to retrieve key bits\n", common->device_path);
-		return 0;
-	}
-
-	for (i = 0; i < KEY_MAX; i++)
-	{
-		if (ISBITSET(keys, i))
-			device_type = deviceTypeFromEvent(common, EV_KEY, i, 0);
-		if (device_type)
-			return device_type;
-	}
-
-	return 0;
-}
-
-/***
- * Retrieve the tool type from an USB data packet by looking at the event
- * codes. Refer to linux/input.h for event codes that define tool types.
- *
- * @param[in] common
- * @param[in] event_ptr A pointer to the USB data packet that contains the
- * events to be processed.
- * @param[in] nevents Number of events in the packet.
- * @param[in] last_device_type The device type for the last event
- *
- * @return The tool type. This falls back on last_device_type if no
- *         pen/touch/eraser event code in the event, and on EVIOCGKEY
- *         if last_device_type is not a tool. If all else fails, '0'
- *         is returned.
- */
-static int usbInitToolType(WacomCommonPtr common, int fd,
-                           const struct input_event *event_ptr,
-                           int nevents, int last_device_type)
-{
-	int i, device_type = 0;
-
-	for (i = 0; (i < nevents) && !device_type; ++i, event_ptr++)
-	{
-		device_type = deviceTypeFromEvent(common, event_ptr->type, event_ptr->code, event_ptr->value);
-	}
-
-	if (!device_type)
-		device_type = last_device_type;
-
-	if (!device_type)
-		device_type = refreshDeviceType(common, fd);
-
-	return device_type;
-}
-
 static void usbDispatchEvents(InputInfoPtr pInfo)
 {
 	int i, c;
@@ -1101,13 +990,8 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 
 	DBG(6, common, "%d events received\n", private->wcmEventCnt);
 
-	private->wcmDeviceType = usbInitToolType(common, pInfo->fd,
-	                                         private->wcmEvents,
-	                                         private->wcmEventCnt,
-	                                         dslast.device_type);
-
 	private->wcmLastToolSerial = 1;
-	channel = usbChooseChannel(common, private->wcmDeviceType, private->wcmLastToolSerial);
+	channel = usbChooseChannel(common, private->wcmLastToolSerial);
 
 	/* couldn't decide channel? invalid data */
 	if (channel == -1) {
@@ -1117,16 +1001,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 
 	ds = &common->wcmChannel[channel].work;
 	dslast = common->wcmChannel[channel].valid.state;
-
-	if (ds->device_type && ds->device_type != private->wcmDeviceType)
-		LogMessageVerbSigSafe(X_ERROR, 0,
-				      "usbDispatchEvents: Device Type mismatch - %d -> %d. This is a BUG.\n",
-				      ds->device_type, private->wcmDeviceType);
-	/* no device type? */
-	if (!ds->device_type && private->wcmDeviceType) {
-		ds->device_type = private->wcmDeviceType;
-		ds->proximity = 1;
-	}
 
 	/* all USB data operates from previous context except relative values*/
 	ds->relwheel = 0;
@@ -1222,7 +1096,7 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 			DBG(10, common, "Dirty flag set on channel %d; sending event.\n", c);
 			common->wcmChannel[c].dirty = FALSE;
 			/* don't send touch event when touch isn't enabled */
-			if (ds->device_type != TOUCH_ID || common->wcmTouch)
+			if (common->wcmTouch)
 				wcmEvent(common, c, ds);
 		}
 	}
