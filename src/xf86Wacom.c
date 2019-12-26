@@ -156,7 +156,6 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 {
 	InputInfoPtr pInfo = (InputInfoPtr)pWcm->public.devicePrivate;
 	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
-	WacomCommonPtr common = priv->common;
 
 	Atom label;
 	int index;
@@ -227,10 +226,6 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 		min = MIN_ROTATION;
 		max = MIN_ROTATION + MAX_ROTATION_RANGE - 1;
 	}
-	else if (IsPad(priv) && TabletHasFeature(common, WCM_STRIP))
-	{ /* XXX: what is this axis label? */
-		max = common->wcmMaxStripX;
-	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 
@@ -256,10 +251,6 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 		min = -1023;
 		max = 1023;
 	}
-	else if (IsPad(priv) && TabletHasFeature(common, WCM_STRIP))
-	{ /* XXX: what is this axis label? */
-		max = common->wcmMaxStripY;
-	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 
@@ -278,31 +269,8 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 		max = MAX_ROTATION_RANGE + MIN_ROTATION - 1;
 		min = MIN_ROTATION;
 	}
-	else if ((TabletHasFeature(common, WCM_RING)) && IsPad(priv))
-	{
-		/* Touch ring */
-		label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_WHEEL);
-		min = common->wcmMinRing;
-		max = common->wcmMaxRing;
-	}
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
-
-	/* seventh valuator: abswheel2 */
-	if ((TabletHasFeature(common, WCM_DUALRING)) && IsPad(priv))
-	{
-		/* XXX: what is this axis label? */
-		index = 6;
-		label = None;
-		mode = Absolute;
-		min_res = max_res = res = 1;
-
-		min = common->wcmMinRing;
-		max = common->wcmMaxRing;
-
-		wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-	}
 
 	return TRUE;
 }
@@ -331,9 +299,6 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 
 	nbaxes = priv->naxes;       /* X, Y, Pressure, Tilt-X, Tilt-Y, Wheel */
 	nbbuttons = priv->nbuttons; /* Use actual number of buttons, if possible */
-
-	if (IsPad(priv) && TabletHasFeature(priv->common, WCM_DUALRING))
-		nbaxes = priv->naxes = nbaxes + 1; /* ABS wheel 2 */
 
 	/* if more than 3 buttons, offset by the four scroll buttons,
 	 * otherwise, alloc 7 buttons for scroll wheel. */
@@ -776,47 +741,6 @@ static void wcmDisableTool(DeviceIntPtr dev)
 	wcmEnableDisableTool(dev, FALSE);
 }
 
-/**
- * Unlink the touch tool from the pen of the same device
- */
-static void wcmUnlinkTouchAndPen(InputInfoPtr pInfo)
-{
-	WacomDevicePtr priv = pInfo->private;
-	WacomCommonPtr common = priv->common;
-	InputInfoPtr device = xf86FirstLocalDevice();
-	WacomCommonPtr tmpcommon = NULL;
-	WacomDevicePtr tmppriv = NULL;
-	Bool touch_device = FALSE;
-
-	if (!TabletHasFeature(common, WCM_PENTOUCH))
-		return;
-
-	/* Lookup to find the associated pen and touch */
-	for (; device != NULL; device = device->next)
-	{
-		if (!strcmp(device->drv->driverName, "wacom"))
-		{
-			tmppriv = (WacomDevicePtr) device->private;
-			tmpcommon = tmppriv->common;
-			touch_device = (common->wcmTouchDevice ||
-						tmpcommon->wcmTouchDevice);
-
-			/* skip the same tool or unlinked devices */
-			if ((tmppriv == priv) || !touch_device)
-				continue;
-
-			if (tmpcommon->tablet_id == common->tablet_id)
-			{
-				common->wcmTouchDevice = NULL;
-				tmpcommon->wcmTouchDevice = NULL;
-				common->tablet_type &= ~WCM_PENTOUCH;
-				tmpcommon->tablet_type &= ~WCM_PENTOUCH;
-				return;
-			}
-		}
-	}
-}
-
 /*****************************************************************************
  * wcmDevProc --
  *   Handle the initialization, etc. of a wacom tablet. Called by the server
@@ -861,7 +785,6 @@ static int wcmDevProc(DeviceIntPtr pWcm, int what)
 			TimerCancel(priv->serial_timer);
 			TimerCancel(priv->touch_timer);
 			wcmDisableTool(pWcm);
-			wcmUnlinkTouchAndPen(pInfo);
 			if (pInfo->fd >= 0)
 			{
 				xf86RemoveEnabledDevice(pInfo);

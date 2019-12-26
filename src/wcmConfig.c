@@ -473,79 +473,6 @@ wcmInitModel(InputInfoPtr pInfo)
 }
 
 /**
- * Lookup to find the associated pen and touch for the same device.
- * Store touch tool in wcmTouchDevice for pen and touch, respectively,
- * of the same device. Update TabletFeature to indicate it is a hybrid
- * of touch and pen.
- *
- * @return True if found a touch tool for hybrid devices.
- * false otherwise.
- */
-static Bool wcmLinkTouchAndPen(InputInfoPtr pInfo)
-{
-	WacomDevicePtr priv = pInfo->private;
-	WacomCommonPtr common = priv->common;
-	InputInfoPtr device = xf86FirstLocalDevice();
-	WacomCommonPtr tmpcommon = NULL;
-	WacomDevicePtr tmppriv = NULL;
-
-	if (IsPad(priv))
-	{
-		DBG(4, priv, "No need to link up pad devices.\n");
-		return FALSE;
-	}
-
-	/* Lookup to find the associated pen and touch */
-	for (; device != NULL; device = device->next)
-	{
-		if (!wcmIsSiblingDevice(pInfo, device, FALSE))
-			continue;
-
-		tmppriv = (WacomDevicePtr) device->private;
-		tmpcommon = tmppriv->common;
-
-		DBG(4, priv, "Considering link with %s...\n", tmppriv->name);
-
-		/* already linked devices */
-		if (tmpcommon->wcmTouchDevice)
-		{
-			DBG(4, priv, "A link is already in place. Ignoring.\n");
-			continue;
-		}
-
-		if (IsTouch(tmppriv))
-		{
-			common->wcmTouchDevice = tmppriv;
-			tmpcommon->wcmTouchDevice = tmppriv;
-		}
-		else if (IsTouch(priv))
-		{
-			common->wcmTouchDevice = priv;
-			tmpcommon->wcmTouchDevice = priv;
-		}
-		else
-		{
-			DBG(4, priv, "A link is not necessary. Ignoring.\n");
-		}
-
-		if ((common->wcmTouchDevice && IsTablet(priv)) ||
-			(tmpcommon->wcmTouchDevice && IsTablet(tmppriv)))
-		{
-			TabletSetFeature(common, WCM_PENTOUCH);
-			TabletSetFeature(tmpcommon, WCM_PENTOUCH);
-		}
-
-		if (common->wcmTouchDevice)
-		{
-			DBG(4, priv, "Link created!\n");
-			return TRUE;
-		}
-	}
-	DBG(4, priv, "No suitable device to link with found.\n");
-	return FALSE;
-}
-
-/**
  * Check if this device was hotplugged by the driver by checking the _source
  * option.
  *
@@ -692,8 +619,6 @@ static int wcmPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
 	/* only link them once per port. We need to try for both tablet tool
 	 * and touch since we do not know which tool will be added first.
 	 */
-	if (IsTouch(priv) || (IsTablet(priv) && !common->wcmTouchDevice))
-		wcmLinkTouchAndPen(pInfo);
 
 	free(type);
 	free(oldname);

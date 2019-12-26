@@ -164,8 +164,6 @@ struct _WacomModel
 					      tilt to rotation */
 #define WCM_PENTOUCH		0x00000400 /* Tablet supports pen and touch */
 #define WCM_DUALRING		0x00000800 /* Tablet has two touch rings */
-#define TabletHasFeature(common, feature) MaskIsSet((common)->tablet_type, (feature))
-#define TabletSetFeature(common, feature) MaskSet((common)->tablet_type, (feature))
 
 #define ABSOLUTE_FLAG		0x00000100
 #define BAUD_19200_FLAG		0x00000400
@@ -387,7 +385,6 @@ struct _WacomCommonRec
 	int debugLevel;
 	int vendor_id;		     /* Vendor ID */
 	int tablet_id;		     /* USB tablet ID */
-	int tablet_type;	     /* bitmask of tablet features (WCM_LCD, WCM_PEN, etc) */
 	int fd;                      /* file descriptor to tablet */
 	int fd_refs;                 /* number of references to fd; if =0, fd is invalid */
 	unsigned long wcmKeys[NBITS(KEY_MAX)]; /* supported tool types for the device */

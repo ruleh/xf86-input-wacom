@@ -1014,17 +1014,6 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	priv = pInfo->private;
 	DBG(11, common, "tool id=%d for %s\n", ds.device_type, pInfo->name);
 
-	if (TabletHasFeature(common, WCM_ROTATION) &&
-		TabletHasFeature(common, WCM_RING) &&
-		ds.device_type == CURSOR_ID) /* I4 mouse */
-	{
-		/* convert Intuos4 mouse tilt to rotation */
-		ds.rotation = wcmTilt2R(ds.tiltx, ds.tilty,
-					INTUOS4_CURSOR_ROTATION_OFFSET);
-		ds.tiltx = 0;
-		ds.tilty = 0;
-	}
-
 	/* JEJ - Do not move this code without discussing it with me.
 	 * The device state is invariant of any filtering performed below.
 	 * Changing the device state after this point can and will cause
