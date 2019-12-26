@@ -18,19 +18,12 @@
 #  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-bin_PROGRAMS = xsetwacom isdv4-serial-debugger isdv4-serial-inputattach
+bin_PROGRAMS = xsetwacom 
 
 AM_CPPFLAGS = -I$(top_srcdir)/include $(CWARNFLAGS)
 AM_CFLAGS = $(CWARNFLAGS)
 
 shared_sources = tools-shared.h tools-shared.c
-
-isdv4_serial_debugger_SOURCES = isdv4-serial-debugger.c $(shared_sources)
-
-isdv4_serial_inputattach_SOURCES = isdv4-serial-inputattach.c $(shared_sources)
-isdv4_serial_inputattach_CFLAGS = $(AM_CFLAGS) $(UDEV_CFLAGS)
-isdv4_serial_inputattach_LDADD = $(UDEV_LIBS)
-
 xsetwacom_SOURCES = xsetwacom.c
 xsetwacom_CFLAGS = $(AM_CFLAGS) $(X11_CFLAGS)
 xsetwacom_LDADD = $(X11_LIBS)
