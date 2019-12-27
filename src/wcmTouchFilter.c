@@ -109,7 +109,7 @@ static void getStateHistory(WacomCommonPtr common, WacomDeviceState states[], in
  * events are sent for already-in-prox contacts.
  */
 static void
-wcmSendTouchEvent(WacomDevicePtr priv, WacomChannelPtr channel, Bool no_update)
+wcmSendTouchEvent(WacomDevicePtr priv, WacomChannelPtr channel)
 {
 #if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 16
 	ValuatorMask *mask = priv->common->touch_mask;
@@ -126,7 +126,7 @@ wcmSendTouchEvent(WacomDevicePtr priv, WacomChannelPtr channel, Bool no_update)
 		DBG(6, priv->common, "This is a touch end event\n");
 		type = XI_TouchEnd;
 	}
-	else if (!oldstate.proximity || no_update) {
+	else if (!oldstate.proximity) {
 		DBG(6, priv->common, "This is a touch begin event\n");
 		type = XI_TouchBegin;
 	}
@@ -154,29 +154,21 @@ wcmFingerMultitouch(WacomDevicePtr priv, int contact_id) {
 	Bool prox = FALSE;
 	int i;
 
-	if (lag_mode) {
-		/* wcmSingleFingerPress triggers a button press as
-		 * soon as a single finger appears. ensure we release
-		 * that button before getting too far along
-		 */
-		wcmSendButtonClick(priv, 1, 0);
-	}
-
 	for (i = 0; i < MAX_CHANNELS; i++) {
 		WacomChannelPtr channel = priv->common->wcmChannel+i;
 		WacomDeviceState state  = channel->valid.state;
 
-		if (lag_mode || state.serial_num == contact_id + 1) {
-			wcmSendTouchEvent(priv, channel, lag_mode);
+		if ( state.serial_num == contact_id + 1) {
+			wcmSendTouchEvent(priv, channel);
 		}
 
 		prox |= state.proximity;
 	}
 
-	if (!prox)
-		priv->common->wcmGestureMode = GESTURE_NONE_MODE;
-	else if (lag_mode)
+	if (lag_mode)
 		priv->common->wcmGestureMode = GESTURE_MULTITOUCH_MODE;
+	else
+		priv->common->wcmGestureMode = GESTURE_NONE_MODE;
 }
 
 static double touchDistance(WacomDeviceState ds0, WacomDeviceState ds1)
