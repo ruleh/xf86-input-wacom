@@ -125,28 +125,6 @@ struct _WacomModel
  * WacomDeviceRec
  *****************************************************************************/
 
-/* these device IDs are reported through ABS_MISC for Protocol 4 devices */
-#define DEVICE_ID(flags) ((flags) & 0xff)
-
-/* Each tablet may have one or more of the following
- * features */
-#define WCM_PEN			0x00000001 /* Tablet supports pens */
-#define WCM_PAD			0x00000002 /* Has a pad tool */
-
-#define WCM_1FGT		0x00000004 /* One finger touch */
-#define WCM_2FGT		0x00000008 /* Two finger touch */
-#define WCM_STRIP		0x00000010 /* Tablet has menu strip (e.g.
-					      Intuos3) */
-#define WCM_RING		0x00000020 /* Tablet has touch ring (e.g.
-					      Intuos4) */
-#define WCM_DUALINPUT		0x00000040 /* Supports two tools on the
-					      tablet simultaneously (Intuos
-					      1 and 2) */
-#define WCM_ROTATION		0x00000080 /* Needs to convert mouse tool
-					      tilt to rotation */
-#define WCM_PENTOUCH		0x00000400 /* Tablet supports pen and touch */
-#define WCM_DUALRING		0x00000800 /* Tablet has two touch rings */
-
 #define ABSOLUTE_FLAG		0x00000100
 #define BAUD_19200_FLAG		0x00000400
 #define BUTTONS_ONLY_FLAG	0x00000800

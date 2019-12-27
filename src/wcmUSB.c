@@ -273,7 +273,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		return !Success;
 	}
 
-	
 	common->wcmMaxTouchX = absinfo.maximum;
 
 	if (absinfo.resolution > 0)
@@ -297,7 +296,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 
 	if (absinfo.resolution > 0)
 		common->wcmTouchResolY = absinfo.resolution * 1000;
-
 
 	/* max finger strip X for tablets with Expresskeys
 	 * or physical X for touch devices in hundredths of a mm */
@@ -923,57 +921,6 @@ static void usbParseKeyEvent(WacomCommonPtr common,
 		return;
 }
 
-/* Handle all button presses except for stylus buttons */
-static void usbParseBTNEvent(WacomCommonPtr common,
-			    struct input_event *event, int channel_number)
-{
-	int nkeys;
-	int change = 1;
-	wcmUSBData *usbdata = common->private;
-	WacomChannel *channel = &common->wcmChannel[channel_number];
-	WacomDeviceState *ds = &channel->work;
-
-	switch (event->code)
-	{
-		case BTN_LEFT:
-			ds->buttons = mod_buttons(ds->buttons, 0, event->value);
-			break;
-
-		case BTN_MIDDLE:
-			ds->buttons = mod_buttons(ds->buttons, 1, event->value);
-			break;
-
-		case BTN_RIGHT:
-			ds->buttons = mod_buttons(ds->buttons, 2, event->value);
-			break;
-
-		case BTN_SIDE:
-		case BTN_BACK:
-			ds->buttons = mod_buttons(ds->buttons, 3, event->value);
-			break;
-
-		case BTN_EXTRA:
-		case BTN_FORWARD:
-			ds->buttons = mod_buttons(ds->buttons, 4, event->value);
-			break;
-
-		default:
-			for (nkeys = 0; nkeys < usbdata->npadkeys; nkeys++)
-			{
-				if (event->code == usbdata->padkey_code[nkeys])
-				{
-					ds->buttons = mod_buttons(ds->buttons, nkeys, event->value);
-					break;
-				}
-			}
-			if (nkeys >= usbdata->npadkeys)
-				change = 0;
-	}
-
-	ds->time = (int)GetTimeInMillis();
-	channel->dirty |= change;
-}
-
 static void usbDispatchEvents(InputInfoPtr pInfo)
 {
 	int i, c;
@@ -1014,22 +961,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		/* Check for events to be ignored and skip them up front. */
 		if (usbFilterEvent(common, event))
 			continue;
-
-		if (common->wcmHasHWTouchSwitch)
-		{
-			if ((event->type == EV_SW) &&
-			    (event->code == SW_MUTE_DEVICE))
-			{
-				/* touch is disabled when SW_MUTE_DEVICE is set */
-				int touch_enabled = (event->value == 0);
-
-				if (touch_enabled != common->wcmHWTouchSwitchState)
-				/* this property is only set for touch device */
-					wcmUpdateHWTouchProperty(
-						common->wcmTouchDevice,
-						touch_enabled);
-			}
-		}
 
 		/* absolute events */
 		if (event->type == EV_ABS)

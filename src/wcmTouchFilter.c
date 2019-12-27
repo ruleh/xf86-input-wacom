@@ -151,7 +151,6 @@ wcmSendTouchEvent(WacomDevicePtr priv, WacomChannelPtr channel)
 static void
 wcmFingerMultitouch(WacomDevicePtr priv, int contact_id) {
 	Bool lag_mode = priv->common->wcmGestureMode == GESTURE_LAG_MODE;
-	Bool prox = FALSE;
 	int i;
 
 	for (i = 0; i < MAX_CHANNELS; i++) {
@@ -161,8 +160,6 @@ wcmFingerMultitouch(WacomDevicePtr priv, int contact_id) {
 		if ( state.serial_num == contact_id + 1) {
 			wcmSendTouchEvent(priv, channel);
 		}
-
-		prox |= state.proximity;
 	}
 
 	if (lag_mode)
