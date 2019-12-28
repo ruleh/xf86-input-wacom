@@ -408,8 +408,8 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 		valuators[0] -= priv->oldState.x;
 		valuators[1] -= priv->oldState.y;
 		valuators[2] -= priv->oldState.pressure;
-		valuators[3] -= priv->oldState.tiltx;
-		valuators[4] -= priv->oldState.tilty;
+		valuators[3] -= 0;
+		valuators[4] -= 0;
 		valuators[5] -= priv->oldState.abswheel;
 		valuators[6] -= priv->oldState.abswheel2;
 	}
@@ -472,10 +472,8 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	int x = ds->x;
 	int y = ds->y;
 	int z = ds->pressure;
-	int tx = ds->tiltx;
-	int ty = ds->tilty;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	int v3, v4, v5, v6;
+	int v5, v6;
 	int valuators[priv->naxes];
 
 	if (priv->serial && serial != priv->serial)
@@ -500,27 +498,25 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		priv->flags &= ~SCROLLMODE_FLAG;
 
 	DBG(7, priv, "[%s] o_prox=%s x=%d y=%d z=%d "
-		"b=%s b=%d tx=%d ty=%d wl=%d wl2=%d rot=%d th=%d\n",
+		"b=%s b=%d wl=%d wl2=%d rot=%d th=%d\n",
 		pInfo->type_name,
 		priv->oldState.proximity ? "true" : "false",
 		x, y, z, is_button ? "true" : "false", ds->buttons,
-		tx, ty, ds->abswheel, ds->abswheel2, ds->rotation, ds->throttle);
+		ds->abswheel, ds->abswheel2, ds->rotation, ds->throttle);
 
 	if (ds->proximity)
 		wcmRotateAndScaleCoordinates(pInfo, &x, &y);
 
-	v3 = tx;
-	v4 = ty;
 
 	v5 = ds->abswheel;
 	v6 = ds->abswheel2;
 
 	DBG(6, priv, "%s prox=%d\tx=%d"
-		"\ty=%d\tz=%d\tv3=%d\tv4=%d\tv5=%d\tv6=%d"
+		"\ty=%d\tz=%d\tv5=%d\tv6=%d"
 		"\tserial=%u\tbutton=%s\tbuttons=%d\n",
 		is_absolute(pInfo) ? "abs" : "rel",
 		ds->proximity,
-		x, y, z, v3, v4, v5, v6, serial,
+		x, y, z, v5, v6, serial,
 		is_button ? "true" : "false", ds->buttons);
 
 	/* when entering prox, replace the zeroed-out oldState with a copy of
@@ -537,8 +533,8 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	valuators[0] = x;
 	valuators[1] = y;
 	valuators[2] = z;
-	valuators[3] = v3;
-	valuators[4] = v4;
+	valuators[3] = 0;
+	valuators[4] = 0;
 	valuators[5] = v5;
 	if (priv->naxes > 6)
 		valuators[6] = v6;
@@ -593,8 +589,6 @@ wcmCheckSuppress(WacomCommonPtr common,
 	/* FIXME: we should have different suppress values for different
 	 * axes with vastly different ranges.
 	 */
-	if (abs(dsOrig->tiltx - dsNew->tiltx) > suppress) goto out;
-	if (abs(dsOrig->tilty - dsNew->tilty) > suppress) goto out;
 	if (abs(dsOrig->pressure - dsNew->pressure) > suppress) goto out;
 	if (abs(dsOrig->throttle - dsNew->throttle) > suppress) goto out;
 	if (abs(dsOrig->rotation - dsNew->rotation) > suppress &&
@@ -691,13 +685,13 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 
 	DBG(10, common,
 		"c=%d s=%u x=%d y=%d b=%d "
-		"p=%d rz=%d tx=%d ty=%d aw=%d aw2=%d rw=%d "
+		"p=%d rz=%d aw=%d aw2=%d rw=%d "
 		"t=%d px=%d st=%d cs=%d \n",
 		channel,
 		ds.serial_num,
 		ds.x, ds.y, ds.buttons,
-		ds.pressure, ds.rotation, ds.tiltx,
-		ds.tilty, ds.abswheel, ds.abswheel2, ds.relwheel, ds.throttle,
+		ds.pressure, ds.rotation, 
+		ds.abswheel, ds.abswheel2, ds.relwheel, ds.throttle,
 		ds.proximity, ds.sample,
 		pChannel->nSamples);
 
@@ -1063,7 +1057,6 @@ WacomCommonPtr wcmNewCommon(void)
 		return NULL;;
 
 	common->refcnt = 1;
-	common->wcmFlags = 0;               /* various flags */
 	common->wcmTPCButton = 0;          /* set Tablet PC button on/off */
 	common->wcmGestureParameters.wcmScrollDirection = 0;
 	common->wcmGestureParameters.wcmTapTime = 250;

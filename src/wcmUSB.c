@@ -163,9 +163,6 @@ static void usbInitProtocol5(WacomCommonPtr common, const char* id,
 {
 	common->wcmPktLength = sizeof(struct input_event);
 	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;
-
-	/* tilt enabled */
-	common->wcmFlags |= TILT_ENABLED_FLAG;
 }
 
 int usbWcmGetRanges(InputInfoPtr pInfo)
@@ -243,78 +240,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		common->wcmTouchResolX =
 			(int)(((double)common->wcmMaxTouchX * 100000.0
 			 / (double)absinfo.maximum) + 0.5);
-	}
-
-	/* X tilt range */
-	if (ISBITSET(abs, ABS_TILT_X) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_TILT_X), &absinfo))
-	{
-		/* If resolution is specified */
-		if (absinfo.resolution > 0)
-		{
-			/* Assume the range is centered on zero */
-			common->wcmTiltOffX = 0;
-			/* Convert to resolution expected by applications */
-			common->wcmTiltFactX = TILT_RES /
-					       (double)absinfo.resolution;
-		}
-		else
-		{
-			/*
-			 * Center the reported range on zero to support
-			 * kernel drivers still reporting non-zero-centered
-			 * values.
-			 */
-			common->wcmTiltOffX = - (absinfo.minimum +
-						 absinfo.maximum) / 2;
-			/*
-			 * Assume reported resolution is the one expected by
-			 * applications
-			 */
-			common->wcmTiltFactX = 1.0;
-		}
-		common->wcmTiltMinX = round((absinfo.minimum +
-					     common->wcmTiltOffX) *
-					    common->wcmTiltFactX);
-		common->wcmTiltMaxX = round((absinfo.maximum +
-					     common->wcmTiltOffX) *
-					    common->wcmTiltFactX);
-	}
-
-	/* Y tilt range */
-	if (ISBITSET(abs, ABS_TILT_Y) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_TILT_Y), &absinfo))
-	{
-		/* If resolution is specified */
-		if (absinfo.resolution > 0)
-		{
-			/* Assume the range is centered on zero */
-			common->wcmTiltOffY = 0;
-			/* Convert to resolution expected by applications */
-			common->wcmTiltFactY = TILT_RES /
-					       (double)absinfo.resolution;
-		}
-		else
-		{
-			/*
-			 * Center the reported range on zero to support
-			 * kernel drivers still reporting non-zero-centered
-			 * values.
-			 */
-			common->wcmTiltOffY = - (absinfo.minimum +
-						 absinfo.maximum) / 2;
-			/*
-			 * Assume reported resolution is the one expected by
-			 * applications
-			 */
-			common->wcmTiltFactY = 1.0;
-		}
-		common->wcmTiltMinY = round((absinfo.minimum +
-					     common->wcmTiltOffY) *
-					    common->wcmTiltFactY);
-		common->wcmTiltMaxY = round((absinfo.maximum +
-					     common->wcmTiltOffY) *
-					    common->wcmTiltFactY);
 	}
 
 	/* max finger strip Y for tablets with Expresskeys
@@ -655,14 +580,6 @@ static int usbParseGenericAbsEvent(WacomCommonPtr common,
 			break;
 		case ABS_RZ:
 			ds->rotation = event->value;
-			break;
-		case ABS_TILT_X:
-			ds->tiltx = round((event->value + common->wcmTiltOffX) *
-					  common->wcmTiltFactX);
-			break;
-		case ABS_TILT_Y:
-			ds->tilty = round((event->value + common->wcmTiltOffY) *
-					  common->wcmTiltFactY);
 			break;
 		case ABS_PRESSURE:
 			ds->pressure = event->value;

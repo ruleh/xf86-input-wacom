@@ -36,11 +36,6 @@
 #define MAX_ROTATION_RANGE 1800 /* the maximum range of the marker pen rotation */
 #define MAX_ABS_WHEEL 1023      /* the maximum value of absolute wheel */
 
-#define TILT_RES (180/M_PI)	/* Reported tilt resolution in points/radian
-				   (1/degree) */
-#define TILT_MIN -64		/* Minimum reported tilt value */
-#define TILT_MAX 63		/* Maximum reported tilt value */
-
 /* I4 cursor tool has a rotation offset of 175 degrees */
 #define INTUOS4_CURSOR_ROTATION_OFFSET 175
 
@@ -161,8 +156,6 @@ struct _WacomDeviceState
 	int y;
 	int buttons;
 	int pressure;
-	int tiltx;
-	int tilty;
 	int stripx;
 	int stripy;
 	int rotation;
@@ -254,8 +247,6 @@ struct _WacomFilterState
         int npoints;
         int x[MAX_SAMPLES];
         int y[MAX_SAMPLES];
-        int tiltx[MAX_SAMPLES];
-        int tilty[MAX_SAMPLES];
 };
 
 struct _WacomChannel
@@ -299,8 +290,6 @@ extern WacomDeviceClass gWacomUSBDevice;
  * WacomCommonRec
  *****************************************************************************/
 
-#define TILT_ENABLED_FLAG       2
-
 #define MAX_FINGERS 16
 #define MAX_CHANNELS (MAX_FINGERS+2) /* one channel for stylus/mouse. The other one for pad */
 
@@ -324,7 +313,6 @@ struct _WacomCommonRec
 	/* Do not move device_path, same offset as priv->name. Used by DBG macro */
 	char* device_path;          /* device file name */
 	dev_t min_maj;               /* minor/major number */
-	unsigned char wcmFlags;     /* various flags (handle tilt) */
 	int debugLevel;
 	int vendor_id;		     /* Vendor ID */
 	int tablet_id;		     /* USB tablet ID */
@@ -353,19 +341,6 @@ struct _WacomCommonRec
 	                              * to wcmMaxZ which is equal to 100% pressure */
 	int wcmMaxDist;              /* tablet max distance value */
 	int wcmMaxContacts;          /* MT device max number of contacts */
-
-	/*
-	 * TODO Remove wcmTiltOff*, once the kernel drivers reporting
-	 * 	non-zero-centered tilt values are no longer in use.
-	 */
-	int wcmTiltOffX;	     /* styli tilt offset in X direction */
-	int wcmTiltOffY;	     /* styli tilt offset in Y direction */
-	double wcmTiltFactX;	     /* styli tilt factor in X direction */
-	double wcmTiltFactY;	     /* styli tilt factor in Y direction */
-	int wcmTiltMinX;	     /* styli min reported tilt in X direction */
-	int wcmTiltMinY;	     /* styli min reported tilt in Y direction */
-	int wcmTiltMaxX;	     /* styli max reported tilt in X direction */
-	int wcmTiltMaxY;	     /* styli max reported tilt in Y direction */
 
 	int wcmMaxStripX;            /* Maximum fingerstrip X */
 	int wcmMaxStripY;            /* Maximum fingerstrip Y */
@@ -411,8 +386,6 @@ struct _WacomCommonRec
 	ValuatorMask *touch_mask;
 #endif
 };
-
-#define HANDLE_TILT(comm) ((comm)->wcmFlags & TILT_ENABLED_FLAG)
 
 /******************************************************************************
  * WacomTool
