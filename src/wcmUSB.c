@@ -38,8 +38,6 @@ typedef struct {
 	struct input_event wcmEvents[MAX_USB_EVENTS];
 	uint32_t wcmEventFlags;      /* event types received in this frame */
 	int nbuttons;                /* total number of buttons */
-	int npadkeys;                /* number of pad keys in the above array */
-	int padkey_code[WCM_MAX_BUTTONS];/* hardware codes for buttons */
 	int lastChannel;
 } wcmUSBData;
 
@@ -128,35 +126,11 @@ usbStart(InputInfoPtr pInfo)
 	return Success;
 }
 
-/* Key codes used to mark tablet buttons -- must be in sync
- * with the keycode array in wacom kernel drivers.
- */
-static unsigned short padkey_codes [] = {
-	BTN_0, BTN_1, BTN_2, BTN_3, BTN_4,
-	BTN_5, BTN_6, BTN_7, BTN_8, BTN_9,
-	BTN_A, BTN_B, BTN_C, BTN_X, BTN_Y, BTN_Z,
-	BTN_BASE, BTN_BASE2, BTN_BASE3,
-	BTN_BASE4, BTN_BASE5, BTN_BASE6,
-	BTN_TL, BTN_TR, BTN_TL2, BTN_TR2, BTN_SELECT
-};
-
-/* Fixed mapped stylus and mouse buttons */
-
-#define WCM_USB_MAX_MOUSE_BUTTONS 5
-#define WCM_USB_MAX_STYLUS_BUTTONS 4
-
-static unsigned short mouse_codes [] = {
-	BTN_LEFT, BTN_MIDDLE, BTN_RIGHT, BTN_BACK, BTN_FORWARD,
-	BTN_SIDE, BTN_EXTRA
-};
-
 static Bool usbWcmInit(InputInfoPtr pInfo, char* id, size_t id_len, float *version)
 {
-	int i;
 	struct input_id sID;
 	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
 	WacomCommonPtr common = priv->common;
-	wcmUSBData *usbdata;
 
 	DBG(1, priv, "initializing USB tablet\n");
 
@@ -176,46 +150,10 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, size_t id_len, float *versi
 		return !Success;
 	}
 
-	usbdata = common->private;
 	*version = 0.0;
 
-	if (!common->wcmModel)
-	{
-		common->wcmModel = &usbUnknown;
-		common->wcmResolX = common->wcmResolY = 1016;
-	}
-
-	/* Find out supported button codes. */
-	usbdata->npadkeys = 0;
-	for (i = 0; i < ARRAY_SIZE(padkey_codes); i++)
-		if (ISBITSET (common->wcmKeys, padkey_codes [i]))
-			usbdata->padkey_code [usbdata->npadkeys++] = padkey_codes [i];
-
-	if (usbdata->npadkeys == 0) {
-		/* If no pad keys were detected, entertain the possibility that any
-		 * mouse buttons which exist may belong to the pad (e.g. Graphire4).
-		 * If we're wrong, this will over-state the capabilities of the pad
-		 * but that shouldn't actually cause problems.
-		 */
-		for (i = ARRAY_SIZE(mouse_codes) - 1; i > 0; i--)
-			if (ISBITSET(common->wcmKeys, mouse_codes[i]))
-				break;
-
-		/* Make sure room for fixed map mouse buttons.  This
-		 * means mappings may overlap with padkey_codes[].
-		 */
-		if (i != 0)
-			usbdata->npadkeys = WCM_USB_MAX_MOUSE_BUTTONS;
-	}
-
-	/* nbuttons tracks maximum buttons on all tools (stylus/mouse).
-	 *
-	 * Mouse support left, middle, right, side, and extra side button.
-	 */
-	if (ISBITSET (common->wcmKeys, BTN_TOOL_MOUSE))
-		usbdata->nbuttons = WCM_USB_MAX_MOUSE_BUTTONS;
-	else
-		usbdata->nbuttons = WCM_USB_MAX_STYLUS_BUTTONS;
+	common->wcmModel = &usbUnknown;
+	common->wcmResolX = common->wcmResolY = 1016;
 
 	return Success;
 }
@@ -305,16 +243,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 		common->wcmTouchResolX =
 			(int)(((double)common->wcmMaxTouchX * 100000.0
 			 / (double)absinfo.maximum) + 0.5);
-	}
-
-	/* max touchring value for standalone pad tools */
-	common->wcmMinRing = 0;
-	common->wcmMaxRing = 71;
-	if (!ISBITSET(ev,EV_MSC) && ISBITSET(abs, ABS_WHEEL) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_WHEEL), &absinfo))
-	{
-		common->wcmMinRing = absinfo.minimum;
-		common->wcmMaxRing = absinfo.maximum;
 	}
 
 	/* X tilt range */
@@ -486,10 +414,6 @@ static int usbChooseChannel(WacomCommonPtr common, unsigned int serial)
 	/* figure out the channel to use based on serial number */
 	int i, channel = -1;
 
-	/* force events from PAD device to PAD_CHANNEL */
-	if (serial == -1)
-		channel = PAD_CHANNEL;
-
 	/* find existing channel */
 	if (channel < 0)
 	{
@@ -509,9 +433,6 @@ static int usbChooseChannel(WacomCommonPtr common, unsigned int serial)
 	{
 		for (i=0; i<MAX_CHANNELS; i++)
 		{
-			if (i == PAD_CHANNEL)
-				continue;
-
 			if (!common->wcmChannel[i].work.proximity &&
 			    !common->wcmChannel[i].valid.state.proximity)
 			{
@@ -530,9 +451,6 @@ static int usbChooseChannel(WacomCommonPtr common, unsigned int serial)
 		 */
 		for (i=0; i<MAX_CHANNELS; i++)
 		{
-			if (i == PAD_CHANNEL)
-				continue;
-
 			if (common->wcmChannel[i].work.proximity &&
 			    (common->wcmChannel[i].work.serial_num != -1))
 			{
@@ -712,10 +630,6 @@ static int usbFilterEvent(WacomCommonPtr common, struct input_event *event)
 	return 0;
 }
 
-#define ERASER_BIT      0x008
-#define PUCK_BITS	0xf00
-#define PUCK_EXCEPTION  0x806
-
 /**
  * Handle ABS events strictly according to their definition as documented
  * in the Linux kernel.
@@ -787,38 +701,6 @@ static void usbParseAbsEvent(WacomCommonPtr common,
 
 	ds->time = (int)GetTimeInMillis();
 	channel->dirty |= change;
-}
-
-/**
- * Flip the mask bit in buttons corresponding to btn to the specified state.
- *
- * @param buttons The current button mask
- * @param btn Zero-indexed button number to change
- * @param state Zero to unset, non-zero to set the mask for the button
- *
- * @return The new button mask
- */
-TEST_NON_STATIC int
-mod_buttons(int buttons, int btn, int state)
-{
-	int mask;
-
-	if (btn >= sizeof(int) * 8)
-	{
-		LogMessageVerbSigSafe(X_ERROR, 0,
-				      "%s: Invalid button number %d. Insufficient storage\n",
-				      __func__, btn);
-		return buttons;
-	}
-
-	mask = 1 << btn;
-
-	if (state)
-		buttons |= mask;
-	else
-		buttons &= ~mask;
-
-	return buttons;
 }
 
 static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
@@ -984,7 +866,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		else if (event->type == EV_KEY)
 		{
 			usbParseKeyEvent(common, event, channel);
-			usbParseBTNEvent(common, event, PAD_CHANNEL);
 		}
 	} /* next event */
 

@@ -86,11 +86,6 @@
 #define ABS_MT_SLOT 0x2f
 #endif
 
-/* 4.15 */
-
-#ifndef BTN_STYLUS3
-#define BTN_STYLUS3 0x149
-#endif
 
 /******************************************************************************
  * Forward Declarations
@@ -308,7 +303,6 @@ extern WacomDeviceClass gWacomUSBDevice;
 
 #define MAX_FINGERS 16
 #define MAX_CHANNELS (MAX_FINGERS+2) /* one channel for stylus/mouse. The other one for pad */
-#define PAD_CHANNEL (MAX_CHANNELS-1)
 
 typedef struct {
 	int wcmZoomDistance;	       /* minimum distance for a zoom touch gesture */
@@ -375,8 +369,6 @@ struct _WacomCommonRec
 
 	int wcmMaxStripX;            /* Maximum fingerstrip X */
 	int wcmMaxStripY;            /* Maximum fingerstrip Y */
-	int wcmMinRing;              /* Minimum touchring value */
-	int wcmMaxRing;              /* Maximum touchring value */
 
 	WacomDevicePtr wcmDevices;   /* list of devices sharing same port */
 	int wcmPktLength;            /* length of a packet */
