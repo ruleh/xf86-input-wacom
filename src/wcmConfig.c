@@ -85,7 +85,7 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->strip_default[STRIP_LEFT_DN] = 5;
 	priv->strip_default[STRIP_RIGHT_UP] = 4;
 	priv->strip_default[STRIP_RIGHT_DN] = 5;
-	priv->naxes = 6;			/* Default number of axes */
+	priv->naxes = 3;			/* Default number of axes */
 
 	common->wcmDevices = priv;
 

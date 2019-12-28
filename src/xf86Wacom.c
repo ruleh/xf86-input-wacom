@@ -190,36 +190,6 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
 
 
-	/* fourth valuator: tilt-x, cursor:z-rotation, pad:strip-x */
-	index = 3;
-	label = None;
-	mode = Absolute;
-	min_res = max_res = res = 1;
-	min = 0;
-	max = 1;
-
-	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
-	/* fifth valuator: tilt-y, cursor:throttle, pad:strip-y */
-	index = 4;
-	label = None;
-	mode = Absolute;
-	min_res = max_res = res = 1;
-	min = 0;
-	max = 1;
-
-	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
-	/* sixth valuator: airbrush: abs-wheel, artpen: rotation, pad:abs-wheel */
-	index = 5;
-	label = None;
-	mode = Absolute;
-	min_res = max_res = res = 1;
-	min = 0;
-	max = 1;
-
-	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
-
 	return TRUE;
 }
 
@@ -292,8 +262,8 @@ static int wcmDevInit(DeviceIntPtr pWcm)
 			return FALSE;
 	}
 
-	if (!nbaxes || nbaxes > 7)
-		nbaxes = priv->naxes = 7;
+	if (!nbaxes || nbaxes > 3)
+		nbaxes = priv->naxes = 3;
 
 	/* axis_labels is just zeros, we set up each valuator with the
 	 * correct property later */

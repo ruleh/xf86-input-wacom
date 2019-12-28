@@ -408,10 +408,6 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 		valuators[0] -= priv->oldState.x;
 		valuators[1] -= priv->oldState.y;
 		valuators[2] -= priv->oldState.pressure;
-		valuators[3] -= 0;
-		valuators[4] -= 0;
-		valuators[5] -= priv->oldState.abswheel;
-		valuators[6] -= priv->oldState.abswheel2;
 	}
 
 	/* coordinates are ready we can send events */
@@ -473,7 +469,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	int y = ds->y;
 	int z = ds->pressure;
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	int v5, v6;
 	int valuators[priv->naxes];
 
 	if (priv->serial && serial != priv->serial)
@@ -508,15 +503,13 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		wcmRotateAndScaleCoordinates(pInfo, &x, &y);
 
 
-	v5 = ds->abswheel;
-	v6 = ds->abswheel2;
 
 	DBG(6, priv, "%s prox=%d\tx=%d"
-		"\ty=%d\tz=%d\tv5=%d\tv6=%d"
+		"\ty=%d\tz=%d"
 		"\tserial=%u\tbutton=%s\tbuttons=%d\n",
 		is_absolute(pInfo) ? "abs" : "rel",
 		ds->proximity,
-		x, y, z, v5, v6, serial,
+		x, y, z, serial,
 		is_button ? "true" : "false", ds->buttons);
 
 	/* when entering prox, replace the zeroed-out oldState with a copy of
@@ -533,11 +526,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	valuators[0] = x;
 	valuators[1] = y;
 	valuators[2] = z;
-	valuators[3] = 0;
-	valuators[4] = 0;
-	valuators[5] = v5;
-	if (priv->naxes > 6)
-		valuators[6] = v6;
 
 	/* don't move the cursor if in gesture mode (except drag mode) */
 	if (wcmTouchNeedSendEvents(priv->common))
