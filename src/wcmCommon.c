@@ -144,14 +144,6 @@ static void wcmSendButtons(InputInfoPtr pInfo, const WacomDeviceState* ds, int b
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
 	DBG(6, priv, "buttons=%d\n", buttons);
 
-	 /* button behaviour (TPC button on):
-		if only tip is pressed/released, send button 1 events
-		if button N is pressed and tip is pressed/released, send
-		button N events.
-		if tip is already down and button N is pressed/released,
-		send button 1 release, then button N events.
-	 */
-
 	first_button = 0; /* zero-indexed because of mask */
 
 	for (button = first_button; button < WCM_MAX_BUTTONS; button++)
@@ -290,12 +282,6 @@ static void sendAButton(InputInfoPtr pInfo, const WacomDeviceState* ds, int butt
 			int mask, int first_val, int num_val, int *valuators)
 {
 	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-#ifdef DEBUG
-	WacomCommonPtr common = priv->common;
-#endif
-
-	DBG(4, priv, "TPCButton(%s) button=%d state=%d\n",
-	    common->wcmTPCButton ? "on" : "off", button, mask);
 
 	if (!priv->keys[button][0])
 		return;
@@ -807,7 +793,7 @@ int wcmInitTablet(InputInfoPtr pInfo, const char* id, float version)
 	WacomModelPtr model = common->wcmModel;
 
 	/* Initialize the tablet */
-	model->Initialize(common,id,version);
+	common->wcmPktLength = sizeof(struct input_event);
 
 	/* Get tablet resolution */
 	if (model->GetResolution)
@@ -887,7 +873,6 @@ WacomCommonPtr wcmNewCommon(void)
 		return NULL;;
 
 	common->refcnt = 1;
-	common->wcmTPCButton = 0;          /* set Tablet PC button on/off */
 	common->wcmGestureParameters.wcmScrollDirection = 0;
 	common->wcmGestureParameters.wcmTapTime = 250;
 	common->wcmRotate = ROTATE_NONE;   /* default tablet rotation to off */
@@ -895,7 +880,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmMaxY = 0;               /* max digitizer logical Y value */
 	common->wcmMaxTouchX = 1024;       /* max touch X value */
 	common->wcmMaxTouchY = 1024;       /* max touch Y value */
-	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;
 			/* default to Intuos */
 	common->wcmSuppress = DEFAULT_SUPPRESS;
 			/* transmit position if increment is superior */

@@ -102,7 +102,6 @@ struct _WacomModel
 {
 	const char* name;
 
-	void (*Initialize)(WacomCommonPtr common, const char* id, float version);
 	void (*GetResolution)(InputInfoPtr pInfo);
 	int (*GetRanges)(InputInfoPtr pInfo);
 	int (*Start)(InputInfoPtr pInfo);
@@ -192,7 +191,6 @@ struct _WacomDeviceRec
 	/* state fields in device coordinates */
 	struct _WacomDeviceState wcmPanscrollState; /* panscroll state tracking */
 	struct _WacomDeviceState oldState; /* previous state information */
-	int oldCursorHwProx;	/* previous cursor hardware proximity */
 
 	int maxCurve;		/* maximum pressure curve value */
 	int *pPressCurve;       /* pressure curve */
@@ -319,7 +317,6 @@ struct _WacomCommonRec
 
 	WacomDeviceClassPtr wcmDevCls; /* device class functions */
 	WacomModelPtr wcmModel;        /* model-specific functions */
-	int wcmTPCButton;	     /* set Tablet PC button on/off */
 	int wcmTouch;	             /* disable/enable touch event */
 	int wcmTouchDefault;	     /* default to disable when not supported */
 	int wcmGesture;	     	     /* disable/enable touch gesture */
@@ -327,9 +324,6 @@ struct _WacomCommonRec
 	int wcmGestureMode;	       /* data is in Gesture Mode? */
 	WacomDeviceState wcmGestureState[MAX_FINGERS]; /* inital state when in gesture mode */
 	WacomGesturesParameters wcmGestureParameters;
-	int wcmMaxCursorDist;	     /* Max mouse distance reported so far */
-	int wcmCursorProxoutDist;    /* Max mouse distance for proxy-out max/256 units */
-	int wcmCursorProxoutDistDefault; /* Default max mouse distance for proxy-out */
 	int wcmSuppress;        	 /* transmit position on delta > supress */
 	int wcmRawSample;	     /* Number of raw data used to filter an event */
 	int wcmPanscrollThreshold;	/* distance pen must move to send a panscroll event */

@@ -45,16 +45,12 @@ static Bool usbDetect(InputInfoPtr);
 static Bool usbWcmInit(InputInfoPtr pDev, char* id, size_t id_len, float *version);
 static int usbProbeKeys(InputInfoPtr pInfo);
 static int usbStart(InputInfoPtr pInfo);
-static void usbInitProtocol5(WacomCommonPtr common, const char* id,
-	float version);
 int usbWcmGetRanges(InputInfoPtr pInfo);
 static int usbParse(InputInfoPtr pInfo, const unsigned char* data, int len);
 static int usbDetectConfig(InputInfoPtr pInfo);
 static void usbParseEvent(InputInfoPtr pInfo,
 	const struct input_event* event);
 static void usbParseSynEvent(InputInfoPtr pInfo,
-			     const struct input_event *event);
-static void usbParseMscEvent(InputInfoPtr pInfo,
 			     const struct input_event *event);
 static void usbDispatchEvents(InputInfoPtr pInfo);
 static int usbChooseChannel(WacomCommonPtr common, unsigned int serial);
@@ -70,7 +66,6 @@ static int usbChooseChannel(WacomCommonPtr common, unsigned int serial);
 static struct _WacomModel usbUnknown =		
 {						
 	.name = "Unknown USB",			
-	.Initialize = usbInitProtocol5,
 	.GetResolution = NULL,			
 	.GetRanges = usbWcmGetRanges,		
 	.Start = usbStart,			
@@ -156,13 +151,6 @@ static Bool usbWcmInit(InputInfoPtr pInfo, char* id, size_t id_len, float *versi
 	common->wcmResolX = common->wcmResolY = 1016;
 
 	return Success;
-}
-
-static void usbInitProtocol5(WacomCommonPtr common, const char* id,
-	float version)
-{
-	common->wcmPktLength = sizeof(struct input_event);
-	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;
 }
 
 int usbWcmGetRanges(InputInfoPtr pInfo)
@@ -284,9 +272,6 @@ static int usbDetectConfig(InputInfoPtr pInfo)
 
 	priv->nbuttons = usbdata->nbuttons;
 
-	if (!common->wcmCursorProxoutDist)
-		common->wcmCursorProxoutDist
-			= common->wcmCursorProxoutDistDefault;
 	return TRUE;
 }
 
@@ -408,41 +393,11 @@ static void usbParseEvent(InputInfoPtr pInfo,
 
 	switch (event->type)
 	{
-		case EV_MSC:
-			usbParseMscEvent(pInfo, event);
-			break;
 		case EV_SYN:
 			usbParseSynEvent(pInfo, event);
 			break;
 		default:
 			break;
-	}
-}
-
-static void usbParseMscEvent(InputInfoPtr pInfo,
-			     const struct input_event *event)
-{
-	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
-	WacomCommonPtr common = priv->common;
-	wcmUSBData* private = common->private;
-
-	if (event->code != MSC_SERIAL)
-		return;
-
-	if (event->value != 0)
-	{
-		/* save the serial number so we can look up the channel number later */
-		private->wcmLastToolSerial = event->value;
-	}
-	else
-	{
-		/* we don't report serial numbers for some tools but we never report
-		 * a serial number with a value of 0 - if that happens drop the
-		 * whole frame */
-		LogMessageVerbSigSafe(X_ERROR, 0,
-				      "%s: usbParse: Ignoring event from invalid serial 0\n",
-				      pInfo->name);
-		usbResetEventCounter(private);
 	}
 }
 
@@ -458,7 +413,7 @@ static void usbParseSynEvent(InputInfoPtr pInfo,
 	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
 	WacomCommonPtr common = priv->common;
 	wcmUSBData* private = common->private;
-	const uint32_t significant_event_types = ~(1 << EV_SYN | 1 << EV_MSC);
+	const uint32_t significant_event_types = ~(1 << EV_SYN);
 
 	if (event->code != SYN_REPORT)
 		return;
@@ -741,12 +696,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 			usbParseAbsEvent(common, event, channel);
 			usbParseAbsMTEvent(common, event);
 		}
-		else if (event->type == EV_REL)
-		{
-			LogMessageVerbSigSafe(X_ERROR, 0,
-					      "%s: rel event recv'd (%d)!\n",
-					      pInfo->name, event->code);
-		}
 		else if (event->type == EV_KEY)
 		{
 			usbParseKeyEvent(common, event, channel);
@@ -802,12 +751,9 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
  *   that a TOUCH device is created later.
  * @param[in] abs Used to detect multi-touch touchscreens.  When detected,
  *   updates keys to add possibly missing BTN_TOOL_DOUBLETAP.
- * @param[in,out] common Used only for tablet features.  Adds TCM_TPC for
- *   touchscreens so correct defaults, such as absolute mode, are used.
  */
 static void usbGenericTouchscreenQuirks(unsigned long *keys,
-					unsigned long *abs,
-					WacomCommonPtr common)
+					unsigned long *abs)
 {
 	/* Serial Tablet PC two finger touch devices do not emit
 	 * BTN_TOOL_DOUBLETAP since they are not touchpads.
@@ -854,7 +800,7 @@ static int usbProbeKeys(InputInfoPtr pInfo)
 	 * protocol.  Detect that and change default protocol 4 to
 	 * generic.
 	 */
-	usbGenericTouchscreenQuirks(common->wcmKeys, abs, common);
+	usbGenericTouchscreenQuirks(common->wcmKeys, abs);
 
 	common->vendor_id = wacom_id.vendor;
 	common->tablet_id = wacom_id.product;
