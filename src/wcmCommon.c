@@ -561,8 +561,6 @@ wcmCheckSuppress(WacomCommonPtr common,
 	 * axes with vastly different ranges.
 	 */
 	if (abs(dsOrig->pressure - dsNew->pressure) > suppress) goto out;
-	if (abs(dsOrig->rotation - dsNew->rotation) > suppress &&
-	    (1800 - abs(dsOrig->rotation - dsNew->rotation)) >  suppress) goto out;
 
 	returnV = SUPPRESS_ALL;
 
@@ -648,12 +646,12 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 
 	DBG(10, common,
 		"c=%d s=%u x=%d y=%d b=%d "
-		"p=%d rz=%d "
+		"p=%d "
 		"px=%d st=%d cs=%d \n",
 		channel,
 		ds.serial_num,
 		ds.x, ds.y, ds.buttons,
-		ds.pressure, ds.rotation, 
+		ds.pressure,
 		ds.proximity, ds.sample,
 		pChannel->nSamples);
 

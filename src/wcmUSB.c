@@ -226,11 +226,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 			!ioctl(pInfo->fd, EVIOCGABS(ABS_PRESSURE), &absinfo))
 		common->wcmMaxZ = absinfo.maximum;
 
-	/* max distance */
-	if (ISBITSET(abs, ABS_DISTANCE) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_DISTANCE), &absinfo))
-		common->wcmMaxDist = absinfo.maximum;
-
 	if (ISBITSET(abs, ABS_MT_SLOT))
 	{
 		private->wcmUseMT = 1;
@@ -514,14 +509,8 @@ static int usbParseGenericAbsEvent(WacomCommonPtr common,
 		case ABS_Y:
 			ds->y = event->value;
 			break;
-		case ABS_RZ:
-			ds->rotation = event->value;
-			break;
 		case ABS_PRESSURE:
 			ds->pressure = event->value;
-			break;
-		case ABS_DISTANCE:
-			ds->distance = event->value;
 			break;
 		default:
 			change = 0;

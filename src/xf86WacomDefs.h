@@ -32,8 +32,6 @@
 #define MAX_SUPPRESS 100        /* max value of suppress */
 #define BUFFER_SIZE 256         /* size of reception buffer */
 #define MAXTRY 3                /* max number of try to receive magic number */
-#define MIN_ROTATION  -900      /* the minimum value of the marker pen rotation */
-#define MAX_ROTATION_RANGE 1800 /* the maximum range of the marker pen rotation */
 
 /* I4 cursor tool has a rotation offset of 175 degrees */
 #define INTUOS4_CURSOR_ROTATION_OFFSET 175
@@ -142,8 +140,6 @@ struct _WacomDeviceState
 	int y;
 	int buttons;
 	int pressure;
-	int rotation;
-	int distance;
 	int proximity;
 	int sample;	/* wraps every 24 days */
 	int time;
@@ -305,7 +301,6 @@ struct _WacomCommonRec
 	int wcmTouchResolY;	     /* touch Y resolution in points/m */
 	                             /* tablet Z resolution is equivalent
 	                              * to wcmMaxZ which is equal to 100% pressure */
-	int wcmMaxDist;              /* tablet max distance value */
 	int wcmMaxContacts;          /* MT device max number of contacts */
 
 	WacomDevicePtr wcmDevices;   /* list of devices sharing same port */
