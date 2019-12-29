@@ -54,7 +54,6 @@ static int *VCOPY(const int *valuators, int nvals)
  * Static functions
  ****************************************************************************/
 
-static int applyPressureCurve(WacomDevicePtr pDev, const WacomDeviceStatePtr pState);
 static void commonDispatchDevice(InputInfoPtr pInfo,
 				 const WacomChannelPtr pChannel);
 static void sendAButton(InputInfoPtr pInfo,  const WacomDeviceState* ds, int button,
@@ -744,114 +743,6 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 		commonDispatchDevice(pInfo, pChannel);
 }
 
-
-/**
- * Return the minimum pressure based on the current minimum pressure and the
- * hardware state. This is mainly to deal with the case where heavily used
- * stylus may have a "pre-loaded" initial pressure. In that case, the tool
- * comes into proximity with a pressure > 0 to begin with and thus offsets
- * the pressure values. This preloaded pressure must be known for pressure
- * normalisation to work.
- *
- * @param priv The wacom device
- * @param ds Current device state
- *
- * @return The minimum pressure value for this tool.
- *
- * @see normalizePressure
- */
-TEST_NON_STATIC int
-rebasePressure(const WacomDevicePtr priv, const WacomDeviceState *ds)
-{
-	int min_pressure;
-
-	/* set the minimum pressure when in prox */
-	if (!priv->oldState.proximity)
-		min_pressure = ds->pressure;
-	else
-		min_pressure = min(priv->minPressure, ds->pressure);
-
-	return min_pressure;
-}
-
-/**
- * Instead of reporting the raw pressure, we normalize
- * the pressure from 0 to maxCurve. This is
- * mainly to deal with the case where heavily used
- * stylus may have a "pre-loaded" initial pressure. To
- * do so, we keep the in-prox pressure and subtract it
- * from the raw pressure to prevent a potential
- * left-click before the pen touches the tablet.
- *
- * @param priv The wacom device
- * @param ds Current device state
- *
- * @return normalized pressure
- * @see rebasePressure
- */
-TEST_NON_STATIC int
-normalizePressure(const WacomDevicePtr priv, const int raw_pressure)
-{
-	WacomCommonPtr common = priv->common;
-	double pressure;
-	int p = raw_pressure;
-	int range_left = common->wcmMaxZ;
-
-	if (common->wcmPressureRecalibration) {
-		p -= priv->minPressure;
-		range_left -= priv->minPressure;
-	}
-	/* normalize pressure to 0..maxCurve */
-	if (range_left >= 1)
-		pressure = xf86ScaleAxis(p,
-					 priv->maxCurve, 0,
-					 range_left,
-					 0);
-	else
-		pressure = priv->maxCurve;
-
-	return (int)pressure;
-}
-
-/*
- * Broken pen with a broken tip might give high pressure values
- * all the time. We want to warn about this. To avoid getting
- * spurious warnings when the tablet is hit quickly will wait
- * until the device goes out of proximity and check if the minimum
- * pressure is still above a threshold of 20 percent of the maximum
- * pressure. Also we make sure the device has seen a sufficient number
- * of events while in proximity that it had a chance to see decreasing
- * pressure values.
- */
-#define LIMIT_LOW_PRESSURE 20 /* percentage of max value */
-#define MIN_EVENT_COUNT 15
-
-static void detectPressureIssue(WacomDevicePtr priv,
-				WacomCommonPtr common,
-				WacomDeviceStatePtr ds)
-{
-	/* pen is just going out of proximity */
-	if (priv->oldState.proximity && !ds->proximity) {
-
-		int pressureThreshold = common->wcmMaxZ * LIMIT_LOW_PRESSURE / 100;
-		/* check if minPressure has persisted all the time
-		   and is too close to the maximum pressure */
-		if (priv->oldMinPressure > pressureThreshold &&
-		    priv->eventCnt > MIN_EVENT_COUNT)
-			LogMessageVerbSigSafe(
-				X_WARNING, 0,
-				"On %s(%d) a base pressure of %d persists while the pen is in proximity.\n"
-				"\tThis is > %d percent of the maximum value (%d).\n"
-				"\tThis indicates a worn out pen, it is time to change your tool. Also see:\n"
-				"\thttp://sourceforge.net/apps/mediawiki/linuxwacom/index.php?title=Pen_Wear.\n",
-				priv->pInfo->name, priv->serial, priv->minPressure, LIMIT_LOW_PRESSURE, common->wcmMaxZ);
-	} else if (!priv->oldState.proximity)
-		priv->eventCnt = 0;
-
-	priv->oldMinPressure = priv->minPressure;
-	priv->eventCnt++;
-}
-
 static void commonDispatchDevice(InputInfoPtr pInfo,
 				 const WacomChannelPtr pChannel)
 {
@@ -859,7 +750,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 	WacomCommonPtr common = priv->common;
 	WacomDeviceState filtered;
 	enum WacomSuppressMode suppress;
-	int raw_pressure = 0;
 
 	filtered = pChannel->valid.state;
 
@@ -870,20 +760,6 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 			" is %u but your system configured %u\n",
 			filtered.serial_num, priv->serial);
 		return;
-	}
-
-	if (common->wcmMaxZ)
-	{
-		detectPressureIssue(priv, common, &filtered);
-
-		raw_pressure = filtered.pressure;
-		if (!priv->oldState.proximity)
-			priv->maxRawPressure = raw_pressure;
-
-		priv->minPressure = rebasePressure(priv, &filtered);
-
-		filtered.pressure = normalizePressure(priv, filtered.pressure);
-		filtered.pressure = applyPressureCurve(priv,&filtered);
 	}
 
 	/* Optionally filter values only while in proximity */
@@ -983,29 +859,6 @@ void wcmSoftOutEvent(InputInfoPtr pInfo)
 }
 
 /*****************************************************************************
-** Transformations
-*****************************************************************************/
-
-/**
- * Apply the current pressure curve to the current pressure.
- *
- * @return The modified pressure value.
- */
-static int applyPressureCurve(WacomDevicePtr pDev, const WacomDeviceStatePtr pState)
-{
-	/* clip the pressure */
-	int p = max(0, pState->pressure);
-
-	p = min(pDev->maxCurve, p);
-
-	/* apply pressure curve function */
-	if (pDev->pPressCurve == NULL)
-		return p;
-	else
-		return pDev->pPressCurve[p];
-}
-
-/*****************************************************************************
  * wcmRotateTablet
  ****************************************************************************/
 
@@ -1062,7 +915,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmRawSample = DEFAULT_SAMPLES;
 			/* number of raw data to be used to for filtering */
 	common->wcmPanscrollThreshold = 0;
-	common->wcmPressureRecalibration = 1;
 	return common;
 }
 

@@ -226,10 +226,7 @@ struct _WacomDeviceRec
 	int maxCurve;		/* maximum pressure curve value */
 	int *pPressCurve;       /* pressure curve */
 	int nPressCtrl[4];      /* control points for curve */
-	int minPressure;	/* the minimum pressure a pen may hold */
-	int oldMinPressure;     /* to record the last minPressure before going out of proximity */
 	unsigned int eventCnt;  /* count number of events while in proximity */
-	int maxRawPressure;     /* maximum 'raw' pressure seen until first button event */
 	WacomToolPtr tool;         /* The common tool-structure for this device */
 
 	int isParent;		/* set to 1 if the device is not auto-hotplugged */
@@ -367,8 +364,6 @@ struct _WacomCommonRec
 	int wcmCursorProxoutDistDefault; /* Default max mouse distance for proxy-out */
 	int wcmSuppress;        	 /* transmit position on delta > supress */
 	int wcmRawSample;	     /* Number of raw data used to filter an event */
-	int wcmPressureRecalibration; /* Determine if pressure recalibration of
-					 worn pens should be performed */
 	int wcmPanscrollThreshold;	/* distance pen must move to send a panscroll event */
 
 	int bufpos;                        /* position with buffer */

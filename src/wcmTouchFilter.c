@@ -121,6 +121,7 @@ wcmSendTouchEvent(WacomDevicePtr priv, WacomChannelPtr channel)
 
 	valuator_mask_set(mask, 0, state.x);
 	valuator_mask_set(mask, 1, state.y);
+	valuator_mask_set(mask, 2, state.pressure);
 
 	if (!state.proximity) {
 		DBG(6, priv->common, "This is a touch end event\n");

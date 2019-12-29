@@ -178,13 +178,10 @@ static int wcmInitAxes(DeviceIntPtr pWcm)
 
 	/* third valuator: pressure */
 	index = 2;
-	label = None;
+	label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_PRESSURE);
 	mode = Absolute;
 	min_res = max_res = res = 1;
 	min = 0;
-	max = 1;
-
-	label = XIGetKnownProperty(AXIS_LABEL_PROP_ABS_PRESSURE);
 	max = priv->maxCurve;
 
 	wcmInitAxis(pInfo->dev, index, label, min, max, res, min_res, max_res, mode);
