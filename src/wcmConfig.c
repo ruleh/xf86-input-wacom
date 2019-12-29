@@ -81,10 +81,6 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->wheel_default[WHEEL_ABS_DN] = 0;
 	priv->wheel_default[WHEEL2_ABS_UP] = 0;
 	priv->wheel_default[WHEEL2_ABS_DN] = 0;
-	priv->strip_default[STRIP_LEFT_UP] = 4;
-	priv->strip_default[STRIP_LEFT_DN] = 5;
-	priv->strip_default[STRIP_RIGHT_UP] = 4;
-	priv->strip_default[STRIP_RIGHT_DN] = 5;
 	priv->naxes = 3;			/* Default number of axes */
 
 	common->wcmDevices = priv;

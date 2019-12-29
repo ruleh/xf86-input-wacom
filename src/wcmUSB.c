@@ -232,25 +232,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	if (absinfo.resolution > 0)
 		common->wcmTouchResolY = absinfo.resolution * 1000;
 
-	/* max finger strip X for tablets with Expresskeys
-	 * or physical X for touch devices in hundredths of a mm */
-	if (ISBITSET(abs, ABS_RX) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_RX), &absinfo))
-	{
-		common->wcmTouchResolX =
-			(int)(((double)common->wcmMaxTouchX * 100000.0
-			 / (double)absinfo.maximum) + 0.5);
-	}
-
-	/* max finger strip Y for tablets with Expresskeys
-	 * or physical Y for touch devices in hundredths of a mm */
-	if (ISBITSET(abs, ABS_RY) &&
-			!ioctl(pInfo->fd, EVIOCGABS(ABS_RY), &absinfo))
-	{
-		common->wcmTouchResolY =
-			 (int)(((double)common->wcmMaxTouchY * 100000.0
-			 / (double)absinfo.maximum) + 0.5);
-	}
 
 	/* max z cannot be configured */
 	if (ISBITSET(abs, ABS_PRESSURE) &&

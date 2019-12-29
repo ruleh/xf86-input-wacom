@@ -570,8 +570,6 @@ wcmCheckSuppress(WacomCommonPtr common,
 	if (dsOrig->proximity != dsNew->proximity) goto out;
 
 	if (dsOrig->buttons != dsNew->buttons) goto out;
-	if (dsOrig->stripx != dsNew->stripx) goto out;
-	if (dsOrig->stripy != dsNew->stripy) goto out;
 
 	/* FIXME: we should have different suppress values for different
 	 * axes with vastly different ranges.
@@ -906,8 +904,6 @@ WacomCommonPtr wcmNewCommon(void)
 	common->wcmMaxY = 0;               /* max digitizer logical Y value */
 	common->wcmMaxTouchX = 1024;       /* max touch X value */
 	common->wcmMaxTouchY = 1024;       /* max touch Y value */
-	common->wcmMaxStripX = 4096;       /* Max fingerstrip X */
-	common->wcmMaxStripY = 4096;       /* Max fingerstrip Y */
 	common->wcmCursorProxoutDistDefault = PROXOUT_INTUOS_DISTANCE;
 			/* default to Intuos */
 	common->wcmSuppress = DEFAULT_SUPPRESS;

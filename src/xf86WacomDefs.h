@@ -140,10 +140,6 @@ struct _WacomModel
 #define WHEEL_ABS_DN      3
 #define WHEEL2_ABS_UP     4
 #define WHEEL2_ABS_DN     5
-#define STRIP_LEFT_UP     0
-#define STRIP_LEFT_DN     1
-#define STRIP_RIGHT_UP    2
-#define STRIP_RIGHT_DN    3
 
 /******************************************************************************
  * WacomDeviceState
@@ -156,8 +152,6 @@ struct _WacomDeviceState
 	int y;
 	int buttons;
 	int pressure;
-	int stripx;
-	int stripy;
 	int rotation;
 	int abswheel;
 	int abswheel2;
@@ -199,17 +193,13 @@ struct _WacomDeviceRec
 	/* button mapping information
 	 *
 	 * 'button' variables are indexed by physical button number (0..nbuttons)
-	 * 'strip' variables are indexed by STRIP_* defines
 	 * 'wheel' variables are indexed by WHEEL_* defines
 	 */
 	int button_default[WCM_MAX_BUTTONS]; /* Default mappings set by ourselves (possibly overridden by xorg.conf) */
-	int strip_default[4];
 	int wheel_default[6];
 	unsigned keys[WCM_MAX_BUTTONS][256]; /* Action codes to perform when the associated event occurs */
-	unsigned strip_keys[4][256];
 	unsigned wheel_keys[6][256];
 	Atom btn_actions[WCM_MAX_BUTTONS];   /* Action references so we can update the action codes when a client makes a change */
-	Atom strip_actions[4];
 	Atom wheel_actions[6];
 
 	int nbuttons;           /* number of buttons for this subdevice */
@@ -338,9 +328,6 @@ struct _WacomCommonRec
 	                              * to wcmMaxZ which is equal to 100% pressure */
 	int wcmMaxDist;              /* tablet max distance value */
 	int wcmMaxContacts;          /* MT device max number of contacts */
-
-	int wcmMaxStripX;            /* Maximum fingerstrip X */
-	int wcmMaxStripY;            /* Maximum fingerstrip Y */
 
 	WacomDevicePtr wcmDevices;   /* list of devices sharing same port */
 	int wcmPktLength;            /* length of a packet */
