@@ -81,7 +81,6 @@ static Atom prop_tablet_area;
 static Atom prop_pressurecurve;
 static Atom prop_serials;
 static Atom prop_serial_binding;
-static Atom prop_wheel_buttons;
 static Atom prop_threshold;
 static Atom prop_suppress;
 static Atom prop_touch;
@@ -143,18 +142,6 @@ static void wcmResetButtonAction(InputInfoPtr pInfo, int button, int nbuttons)
 	sprintf(name, "Wacom button action %d", button);
 	new_action[0] = AC_BUTTON | AC_KEYBTNPRESS | x11_button;
 	wcmResetAction(pInfo, name, button, priv->btn_actions, priv->keys, &new_action, prop_btnactions, nbuttons);
-}
-
-static void wcmResetWheelAction(InputInfoPtr pInfo, int index)
-{
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	unsigned int new_action[256] = {};
-	char name[64];
-
-	sprintf(name, "Wacom wheel action %d", index);
-	new_action[0] = AC_BUTTON | AC_KEYBTNPRESS | (priv->wheel_default[index]);
-	new_action[1] = AC_BUTTON | (priv->wheel_default[index]);
-	wcmResetAction(pInfo, name, index, priv->wheel_actions, priv->wheel_keys, &new_action, prop_wheel_buttons, 6);
 }
 
 /**
@@ -309,7 +296,7 @@ static int wcmFindProp(Atom property, Atom *prop_list, int nprops)
 
 /**
  * Obtain a pointer to the the handler and action list for a given Action
- * property. This function searches the button, wheel, and strip property
+ * property. This function searches the button property
  * handler lists.
  *
  * @param priv          The device whose handler lists should be searched
@@ -328,14 +315,6 @@ static BOOL wcmFindActionHandler(WacomDevicePtr priv, Atom property, Atom **hand
 	{
 		*handler = &priv->btn_actions[offset];
 		*action  = &priv->keys[offset];
-		return TRUE;
-	}
-
-	offset = wcmFindProp(property, priv->wheel_actions, ARRAY_SIZE(priv->wheel_actions));
-	if (offset >= 0)
-	{
-		*handler = &priv->wheel_actions[offset];
-		*action  = &priv->wheel_keys[offset];
 		return TRUE;
 	}
 
@@ -527,8 +506,6 @@ static int wcmSetActionsProperty(DeviceIntPtr dev, Atom property,
 			{
 				if (property == prop_btnactions)
 					wcmResetButtonAction(pInfo, index, size);
-				else if (property == prop_wheel_buttons)
-					wcmResetWheelAction(pInfo, index);
 
 				if (subproperty != handlers[index])
 					subproperty = handlers[index];
@@ -643,9 +620,6 @@ int wcmDeleteProperty(DeviceIntPtr dev, Atom property)
 	int i;
 
 	i = wcmFindProp(property, priv->btn_actions, ARRAY_SIZE(priv->btn_actions));
-	if (i < 0)
-		i = wcmFindProp(property, priv->wheel_actions,
-				ARRAY_SIZE(priv->wheel_actions));
 
 	return (i >= 0) ? BadAccess : Success;
 }
@@ -757,9 +731,7 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 			serial = *(CARD32*)prop->data;
 			wcmBindToSerial(pInfo, serial);
 		}
-	} else if (property == prop_wheel_buttons)
-		return wcmSetActionsProperty(dev, property, prop, checkonly, ARRAY_SIZE(priv->wheel_actions), priv->wheel_actions, priv->wheel_keys);
-	else if (property == prop_threshold)
+	} else if (property == prop_threshold)
 	{
 		const INT32 MAXIMUM = wcmInternalToUserPressure(pInfo, priv->maxCurve);
 		INT32 value;
@@ -929,12 +901,6 @@ int wcmGetProperty (DeviceIntPtr dev, Atom property)
 		return XIChangeDeviceProperty(dev, property, XA_ATOM, 32,
 		                              PropModeReplace, nbuttons,
 		                              x11_btn_actions, FALSE);
-	}
-	else if (property == prop_wheel_buttons)
-	{
-		return XIChangeDeviceProperty(dev, property, XA_ATOM, 32,
-		                              PropModeReplace, ARRAY_SIZE(priv->wheel_actions),
-		                              priv->wheel_actions, FALSE);
 	}
 
 	return Success;

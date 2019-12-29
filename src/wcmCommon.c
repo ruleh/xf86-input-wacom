@@ -492,11 +492,11 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		priv->flags &= ~SCROLLMODE_FLAG;
 
 	DBG(7, priv, "[%s] o_prox=%s x=%d y=%d z=%d "
-		"b=%s b=%d wl=%d wl2=%d rot=%d th=%d\n",
+		"b=%s b=%d\n",
 		pInfo->type_name,
 		priv->oldState.proximity ? "true" : "false",
-		x, y, z, is_button ? "true" : "false", ds->buttons,
-		ds->abswheel, ds->abswheel2, ds->rotation, ds->throttle);
+		x, y, z, is_button ? "true" : "false", ds->buttons);
+
 
 	if (ds->proximity)
 		wcmRotateAndScaleCoordinates(pInfo, &x, &y);
@@ -575,16 +575,8 @@ wcmCheckSuppress(WacomCommonPtr common,
 	 * axes with vastly different ranges.
 	 */
 	if (abs(dsOrig->pressure - dsNew->pressure) > suppress) goto out;
-	if (abs(dsOrig->throttle - dsNew->throttle) > suppress) goto out;
 	if (abs(dsOrig->rotation - dsNew->rotation) > suppress &&
 	    (1800 - abs(dsOrig->rotation - dsNew->rotation)) >  suppress) goto out;
-
-	/* look for change in absolute wheel position 
-	 * or any relative wheel movement
-	 */
-	if (abs(dsOrig->abswheel  - dsNew->abswheel)  > suppress) goto out;
-	if (abs(dsOrig->abswheel2 - dsNew->abswheel2) > suppress) goto out;
-	if (dsNew->relwheel != 0) goto out;
 
 	returnV = SUPPRESS_ALL;
 
@@ -670,13 +662,12 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 
 	DBG(10, common,
 		"c=%d s=%u x=%d y=%d b=%d "
-		"p=%d rz=%d aw=%d aw2=%d rw=%d "
-		"t=%d px=%d st=%d cs=%d \n",
+		"p=%d rz=%d "
+		"px=%d st=%d cs=%d \n",
 		channel,
 		ds.serial_num,
 		ds.x, ds.y, ds.buttons,
 		ds.pressure, ds.rotation, 
-		ds.abswheel, ds.abswheel2, ds.relwheel, ds.throttle,
 		ds.proximity, ds.sample,
 		pChannel->nSamples);
 
@@ -797,7 +788,7 @@ static void commonDispatchDevice(InputInfoPtr pInfo,
 				return;
 			}
 
-			/* send other events, such as button/wheel */
+			/* send other events, such as button */
 			filtered.x = priv->oldState.x;
 			filtered.y = priv->oldState.y;
 		}

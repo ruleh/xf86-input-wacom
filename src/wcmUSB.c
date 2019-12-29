@@ -568,12 +568,6 @@ static int usbParseGenericAbsEvent(WacomCommonPtr common,
 		case ABS_DISTANCE:
 			ds->distance = event->value;
 			break;
-		case ABS_WHEEL:
-			ds->abswheel = event->value;
-			break;
-		case ABS_THROTTLE:
-			ds->throttle = event->value;
-			break;
 		default:
 			change = 0;
 	}
@@ -727,7 +721,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	dslast = common->wcmChannel[channel].valid.state;
 
 	/* all USB data operates from previous context except relative values*/
-	ds->relwheel = 0;
 	ds->serial_num = private->wcmLastToolSerial;
 
 	/* loop through all events in group */
@@ -750,16 +743,9 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		}
 		else if (event->type == EV_REL)
 		{
-			if (event->code == REL_WHEEL)
-			{
-				ds->relwheel = -event->value;
-				ds->time = (int)GetTimeInMillis();
-				common->wcmChannel[channel].dirty |= TRUE;
-			}
-			else
-				LogMessageVerbSigSafe(X_ERROR, 0,
-						      "%s: rel event recv'd (%d)!\n",
-						      pInfo->name, event->code);
+			LogMessageVerbSigSafe(X_ERROR, 0,
+					      "%s: rel event recv'd (%d)!\n",
+					      pInfo->name, event->code);
 		}
 		else if (event->type == EV_KEY)
 		{

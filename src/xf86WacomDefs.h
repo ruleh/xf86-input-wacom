@@ -34,7 +34,6 @@
 #define MAXTRY 3                /* max number of try to receive magic number */
 #define MIN_ROTATION  -900      /* the minimum value of the marker pen rotation */
 #define MAX_ROTATION_RANGE 1800 /* the maximum range of the marker pen rotation */
-#define MAX_ABS_WHEEL 1023      /* the maximum value of absolute wheel */
 
 /* I4 cursor tool has a rotation offset of 175 degrees */
 #define INTUOS4_CURSOR_ROTATION_OFFSET 175
@@ -133,14 +132,6 @@ struct _WacomModel
 #define AXIS_INVERT  0x01               /* Flag describing an axis which increases "downward" */
 #define AXIS_BITWISE 0x02               /* Flag describing an axis which changes bitwise */
 
-/* Indicies into the wheel/strip default/keys/actions arrays */
-#define WHEEL_REL_UP      0
-#define WHEEL_REL_DN      1
-#define WHEEL_ABS_UP      2
-#define WHEEL_ABS_DN      3
-#define WHEEL2_ABS_UP     4
-#define WHEEL2_ABS_DN     5
-
 /******************************************************************************
  * WacomDeviceState
  *****************************************************************************/
@@ -153,19 +144,13 @@ struct _WacomDeviceState
 	int buttons;
 	int pressure;
 	int rotation;
-	int abswheel;
-	int abswheel2;
-	int relwheel;
 	int distance;
-	int throttle;
 	int proximity;
 	int sample;	/* wraps every 24 days */
 	int time;
 };
 
 static const struct _WacomDeviceState OUTPROX_STATE = {
-  .abswheel = INT_MAX,
-  .abswheel2 = INT_MAX
 };
 
 struct _WacomDeviceRec
@@ -193,14 +178,10 @@ struct _WacomDeviceRec
 	/* button mapping information
 	 *
 	 * 'button' variables are indexed by physical button number (0..nbuttons)
-	 * 'wheel' variables are indexed by WHEEL_* defines
 	 */
 	int button_default[WCM_MAX_BUTTONS]; /* Default mappings set by ourselves (possibly overridden by xorg.conf) */
-	int wheel_default[6];
 	unsigned keys[WCM_MAX_BUTTONS][256]; /* Action codes to perform when the associated event occurs */
-	unsigned wheel_keys[6][256];
 	Atom btn_actions[WCM_MAX_BUTTONS];   /* Action references so we can update the action codes when a client makes a change */
-	Atom wheel_actions[6];
 
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */

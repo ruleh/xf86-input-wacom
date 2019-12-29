@@ -75,12 +75,6 @@ static int wcmAllocate(InputInfoPtr pInfo)
 		priv->button_default[i] = (i < 3) ? i + 1 : i + 5;
 
 	priv->nbuttons = WCM_MAX_BUTTONS;       /* Default number of buttons */
-	priv->wheel_default[WHEEL_REL_UP] = 5;
-	priv->wheel_default[WHEEL_REL_DN] = 4;
-	priv->wheel_default[WHEEL_ABS_UP] = 0;
-	priv->wheel_default[WHEEL_ABS_DN] = 0;
-	priv->wheel_default[WHEEL2_ABS_UP] = 0;
-	priv->wheel_default[WHEEL2_ABS_DN] = 0;
 	priv->naxes = 3;			/* Default number of axes */
 
 	common->wcmDevices = priv;
