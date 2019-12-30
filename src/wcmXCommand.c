@@ -90,7 +90,6 @@ static Atom prop_gesture_param;
 static Atom prop_tooltype;
 static Atom prop_btnactions;
 static Atom prop_product_id;
-static Atom prop_panscroll_threshold;
 #ifdef DEBUG
 static Atom prop_debuglevels;
 #endif
@@ -265,9 +264,6 @@ void InitWcmDeviceProperties(InputInfoPtr pInfo)
 	prop_btnactions = InitWcmAtom(pInfo->dev, WACOM_PROP_BUTTON_ACTIONS, XA_ATOM, 32, priv->nbuttons, values);
 	for (i = 0; i < priv->nbuttons; i++)
 		wcmResetButtonAction(pInfo, i, priv->nbuttons);
-
-	values[0] = common->wcmPanscrollThreshold;
-	prop_panscroll_threshold = InitWcmAtom(pInfo->dev, WACOM_PROP_PANSCROLL_THRESHOLD, XA_INTEGER, 32, 1, values);
 
 	values[0] = common->vendor_id;
 	values[1] = common->tablet_id;
@@ -827,20 +823,6 @@ int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop,
 	{
 		int nbuttons = priv->nbuttons < 4 ? priv->nbuttons : priv->nbuttons + 4;
 		return wcmSetActionsProperty(dev, property, prop, checkonly, nbuttons, priv->btn_actions, priv->keys);
-	} else if (property == prop_panscroll_threshold)
-	{
-		CARD32 *values = (CARD32*)prop->data;
-
-		if (prop->size != 1 || prop->format != 32)
-			return BadValue;
-
-		if (values[0] <= 0)
-			return BadValue;
-
-		return BadMatch;
-
-		if (!checkonly)
-			common->wcmPanscrollThreshold = values[0];
 	} else
 	{
 		Atom *handler = NULL;

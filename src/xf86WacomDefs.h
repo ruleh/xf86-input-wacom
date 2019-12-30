@@ -114,7 +114,6 @@ struct _WacomModel
 #define ABSOLUTE_FLAG		0x00000100
 #define BAUD_19200_FLAG		0x00000400
 #define BUTTONS_ONLY_FLAG	0x00000800
-#define SCROLLMODE_FLAG		0x00001000
 
 #define IsUSBDevice(common) ((common)->wcmDevCls == &gWacomUSBDevice)
 
@@ -185,7 +184,6 @@ struct _WacomDeviceRec
 	WacomCommonPtr common;  /* common info pointer */
 
 	/* state fields in device coordinates */
-	struct _WacomDeviceState wcmPanscrollState; /* panscroll state tracking */
 	struct _WacomDeviceState oldState; /* previous state information */
 
 	int maxCurve;		/* maximum pressure curve value */
@@ -321,7 +319,6 @@ struct _WacomCommonRec
 	WacomGesturesParameters wcmGestureParameters;
 	int wcmSuppress;        	 /* transmit position on delta > supress */
 	int wcmRawSample;	     /* Number of raw data used to filter an event */
-	int wcmPanscrollThreshold;	/* distance pen must move to send a panscroll event */
 
 	int bufpos;                        /* position with buffer */
 	unsigned char buffer[BUFFER_SIZE]; /* data read from device */

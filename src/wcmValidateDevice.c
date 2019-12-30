@@ -665,9 +665,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	tool = priv->tool;
 	tool->serial = priv->serial;
 
-	common->wcmPanscrollThreshold = xf86SetIntOption(pInfo->options, "PanScrollThreshold",
-			common->wcmPanscrollThreshold);
-
 	/* The first device doesn't need to add any tools/areas as it
 	 * will be the first anyway. So if different, add tool
 	 * and/or area to the existing lists
