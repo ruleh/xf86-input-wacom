@@ -32,7 +32,6 @@
 
 typedef struct {
 	int wcmLastToolSerial;
-	Bool wcmUseMT;
 	int wcmMTChannel;
 	int wcmEventCnt;
 	struct input_event wcmEvents[MAX_USB_EVENTS];
@@ -63,13 +62,13 @@ static int usbChooseChannel(WacomCommonPtr common, unsigned int serial);
 		usbProbeKeys
 	};
 
-static struct _WacomModel usbUnknown =		
-{						
-	.name = "Unknown USB",			
-	.GetResolution = NULL,			
-	.GetRanges = usbWcmGetRanges,		
-	.Start = usbStart,			
-	.Parse = usbParse,			
+static struct _WacomModel usbUnknown =
+{
+	.name = "Unknown USB",
+	.GetResolution = NULL,
+	.GetRanges = usbWcmGetRanges,
+	.Start = usbStart,
+	.Parse = usbParse,
 	.DetectConfig = usbDetectConfig,	
 };
 
@@ -161,7 +160,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	unsigned long sw[NBITS(SW_MAX)] = {0};
 	WacomDevicePtr priv = (WacomDevicePtr)pInfo->private;
 	WacomCommonPtr common =	priv->common;
-	wcmUSBData* private = common->private;
 
 	if (ioctl(pInfo->fd, EVIOCGBIT(0 /*EV*/, sizeof(ev)), ev) < 0)
 	{
@@ -228,8 +226,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 
 	if (ISBITSET(abs, ABS_MT_SLOT))
 	{
-		private->wcmUseMT = 1;
-
 		if (!ioctl(pInfo->fd, EVIOCGABS(ABS_MT_SLOT), &absinfo))
 			common->wcmMaxContacts = absinfo.maximum + 1;
 	}
@@ -238,20 +234,6 @@ int usbWcmGetRanges(InputInfoPtr pInfo)
 	{
 		xf86Msg(X_ERROR, "%s: unable to ioctl sw bits.\n", pInfo->name);
 		return 0;
-	}
-	else if (ISBITSET(sw, SW_MUTE_DEVICE))
-	{
-		common->wcmHasHWTouchSwitch = TRUE;
-
-		memset(sw, 0, sizeof(sw));
-
-		if (ioctl(pInfo->fd, EVIOCGSW(sizeof(sw)), sw) < 0)
-			xf86Msg(X_ERROR, "%s: unable to ioctl sw state.\n", pInfo->name);
-
-		if (ISBITSET(sw, SW_MUTE_DEVICE))
-			common->wcmHWTouchSwitchState = 0;
-		else
-			common->wcmHWTouchSwitchState = 1;
 	}
 
 	return Success;
@@ -386,14 +368,8 @@ static void usbParseEvent(InputInfoPtr pInfo,
 	private->wcmEvents[private->wcmEventCnt++] = *event;
 	private->wcmEventFlags |= 1 << event->type;
 
-	switch (event->type)
-	{
-		case EV_SYN:
-			usbParseSynEvent(pInfo, event);
-			break;
-		default:
-			break;
-	}
+	if (event->type == EV_SYN)
+		usbParseSynEvent(pInfo, event);
 }
 
 /**
@@ -421,8 +397,7 @@ static void usbParseSynEvent(InputInfoPtr pInfo,
 		goto skipEvent;
 	}
 
-
-	/* If all we get in an event frame is EV_SYN/EV_MSC, we don't have
+	/* If all we get in an event frame is EV_SYNC, we don't have
 	 * real data to process. */
 	if ((private->wcmEventFlags & significant_event_types) == 0)
 	{
@@ -439,104 +414,33 @@ skipEvent:
 
 static int usbFilterEvent(WacomCommonPtr common, struct input_event *event)
 {
-	wcmUSBData* private = common->private;
-
-	/* For devices that report multitouch, the following list is a set of
+	/* The following list is a set of
 	 * duplicate data from one slot and needs to be filtered out.
-	 */
-	if (private->wcmUseMT)
-	{
-		if (event->type == EV_KEY)
-		{
-			switch(event->code)
-			{
-				case BTN_TOUCH:
-				case BTN_TOOL_FINGER:
-				case BTN_TOOL_DOUBLETAP:
-				case BTN_TOOL_TRIPLETAP:
-					return 1;
-			}
-		}
-		else if (event->type == EV_ABS)
-		{
-			/* filter ST for MT */
-			switch(event->code)
-			{
-				case ABS_X:
-				case ABS_Y:
-				case ABS_PRESSURE:
-					return 1;
-			}
-		}
-	}
-
-	/* For generic devices, filter out doubletap/tripletap that
-	 * can be confused with older protocol.
 	 */
 	if (event->type == EV_KEY)
 	{
 		switch(event->code)
 		{
+			case BTN_TOUCH:
+			case BTN_TOOL_FINGER:
 			case BTN_TOOL_DOUBLETAP:
 			case BTN_TOOL_TRIPLETAP:
 				return 1;
 		}
 	}
-
-	return 0;
-}
-
-/**
- * Handle ABS events strictly according to their definition as documented
- * in the Linux kernel.
- *
- * @param common
- * @param event
- * @param channel_number
- */
-static int usbParseGenericAbsEvent(WacomCommonPtr common,
-			    struct input_event *event, int channel_number)
-{
-	WacomChannel *channel = &common->wcmChannel[channel_number];
-	WacomDeviceState *ds = &channel->work;
-	int change = 1;
-
-	switch(event->code)
+	else if (event->type == EV_ABS)
 	{
-		case ABS_X:
-			ds->x = event->value;
-			break;
-		case ABS_Y:
-			ds->y = event->value;
-			break;
-		case ABS_PRESSURE:
-			ds->pressure = event->value;
-			break;
-		default:
-			change = 0;
+		/* filter ST for MT */
+		switch(event->code)
+		{
+			case ABS_X:
+			case ABS_Y:
+			case ABS_PRESSURE:
+				return 1;
+		}
 	}
 
-	return change;
-}
-
-/**
- * Handle an incoming ABS event.
- *
- * @param common
- * @param event
- * @param channel_number
- */
-static void usbParseAbsEvent(WacomCommonPtr common,
-			    struct input_event *event, int channel_number)
-{
-	WacomChannel *channel = &common->wcmChannel[channel_number];
-	WacomDeviceState *ds = &channel->work;
-	Bool change;
-
-	change = usbParseGenericAbsEvent(common, event, channel_number);
-
-	ds->time = (int)GetTimeInMillis();
-	channel->dirty |= change;
+	return 0;
 }
 
 static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
@@ -586,59 +490,6 @@ static void usbParseAbsMTEvent(WacomCommonPtr common, struct input_event *event)
 	(&common->wcmChannel[private->wcmMTChannel])->dirty |= change;
 }
 
-static void usbParseKeyEvent(WacomCommonPtr common,
-			    struct input_event *event, int channel_number)
-{
-	int change = 1;
-	WacomChannel *channel = &common->wcmChannel[channel_number];
-	WacomDeviceState *ds = &channel->work;
-	WacomDeviceState *dslast = &channel->valid.state;
-
-	/* BTN_TOOL_* are sent to indicate when a specific tool is going
-	 * in our out of proximity.  When going in proximity, here we
-	 * initialize tool specific values.  Making sure shared values
-	 * are correct values during tool change is done elsewhere.
-	 */
-	switch (event->code)
-	{
-		case BTN_TOOL_FINGER:
-			/* A pad tool */
-			/* fall through */
-		case BTN_TOOL_DOUBLETAP:
-			DBG(6, common,
-			    "USB Touch detected %x (value=%d)\n",
-			    event->code, event->value);
-			ds->proximity = event->value;
-			/* time stamp for 2FGT gesture events */
-			if ((ds->proximity && !dslast->proximity) ||
-			    (!ds->proximity && dslast->proximity))
-				ds->sample = (int)GetTimeInMillis();
-			break;
-
-		case BTN_TOOL_TRIPLETAP:
-			DBG(6, common,
-			    "USB Touch second finger detected %x (value=%d)\n",
-			    event->code, event->value);
-			ds->proximity = event->value;
-			/* time stamp for 2GT gesture events */
-			if ((ds->proximity && !dslast->proximity) ||
-			    (!ds->proximity && dslast->proximity))
-				ds->sample = (int)GetTimeInMillis();
-			/* Second finger events will be considered in
-			 * combination with the first finger data */
-			break;
-
-		default:
-			change = 0;
-	}
-
-	ds->time = (int)GetTimeInMillis();
-	channel->dirty |= change;
-
-	if (change)
-		return;
-}
-
 static void usbDispatchEvents(InputInfoPtr pInfo)
 {
 	int i, c;
@@ -682,12 +533,7 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 		/* absolute events */
 		if (event->type == EV_ABS)
 		{
-			usbParseAbsEvent(common, event, channel);
 			usbParseAbsMTEvent(common, event);
-		}
-		else if (event->type == EV_KEY)
-		{
-			usbParseKeyEvent(common, event, channel);
 		}
 	} /* next event */
 
@@ -733,24 +579,6 @@ static void usbDispatchEvents(InputInfoPtr pInfo)
 	}
 }
 
-/* Quirks to unify the tool and tablet types for GENERIC protocol tablet PCs
- *
- * @param[in,out] keys Contains keys queried from hardware. If a
- *   touchscreen is detected, keys are modified to add BTN_TOOL_FINGER so
- *   that a TOUCH device is created later.
- * @param[in] abs Used to detect multi-touch touchscreens.  When detected,
- *   updates keys to add possibly missing BTN_TOOL_DOUBLETAP.
- */
-static void usbGenericTouchscreenQuirks(unsigned long *keys,
-					unsigned long *abs)
-{
-	/* Serial Tablet PC two finger touch devices do not emit
-	 * BTN_TOOL_DOUBLETAP since they are not touchpads.
-	 */
-	if (ISBITSET(abs, ABS_MT_SLOT) && !ISBITSET(keys, BTN_TOOL_DOUBLETAP))
-		SETBIT(keys, BTN_TOOL_DOUBLETAP); /* 2FGT */
-}
-
 /**
  * Query the device's fd for the key bits and the tablet ID. Returns the ID
  * on success or 0 on failure.
@@ -784,12 +612,6 @@ static int usbProbeKeys(InputInfoPtr pInfo)
 			"abs bits.\n", pInfo->name);
 		return 0;
 	}
-
-	/* The wcmKeys stored above have different meaning for generic
-	 * protocol.  Detect that and change default protocol 4 to
-	 * generic.
-	 */
-	usbGenericTouchscreenQuirks(common->wcmKeys, abs);
 
 	common->vendor_id = wacom_id.vendor;
 	common->tablet_id = wacom_id.product;

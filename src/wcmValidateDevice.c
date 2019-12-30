@@ -120,13 +120,14 @@ ret:
 	return isInUse;
 }
 
+// TODO: remove this
 static struct
 {
 	const char* type;
 	__u16 tool[3]; /* tool array is terminated by 0 */
 } wcmType [] =
 {
-	{ "touch",  { BTN_TOOL_DOUBLETAP, BTN_TOOL_FINGER, 0 } }
+	{ "touch",  { BTN_TOUCH, BTN_TOOL_FINGER, 0 } }
 };
 
 /* validate tool type for device/product */
