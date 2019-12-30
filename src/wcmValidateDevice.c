@@ -693,9 +693,6 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 	common->wcmThreshold = xf86SetIntOption(pInfo->options, "Threshold",
 			common->wcmThreshold);
 
-	if (xf86SetBoolOption(pInfo->options, "ButtonsOnly", 0))
-		priv->flags |= BUTTONS_ONLY_FLAG;
-
 	// set touch settings
 	common->wcmTouchDefault = 1;
 	common->wcmGestureDefault = 1;

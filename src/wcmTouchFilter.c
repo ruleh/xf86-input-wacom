@@ -225,11 +225,6 @@ static void wcmSendButtonClick(WacomDevicePtr priv, int button, int state)
 	/* send button event in state */
 	xf86PostButtonEventP(priv->pInfo->dev, mode,button,
 		state,0,0,0);
-
-	/* We have changed the button state (from down to up) for the device
-	 * so we need to update the record */
-	if (button == 1)
-		priv->oldState.buttons = 0;
 }
 
 /*****************************************************************************

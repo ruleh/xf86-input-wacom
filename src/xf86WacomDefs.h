@@ -137,7 +137,6 @@ struct _WacomDeviceState
 	unsigned int serial_num;
 	int x;
 	int y;
-	int buttons;
 	int pressure;
 	int proximity;
 	int sample;	/* wraps every 24 days */

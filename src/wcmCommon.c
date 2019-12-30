@@ -56,9 +56,6 @@ static int *VCOPY(const int *valuators, int nvals)
 
 static void commonDispatchDevice(InputInfoPtr pInfo,
 				 const WacomChannelPtr pChannel);
-static void sendAButton(InputInfoPtr pInfo,  const WacomDeviceState* ds, int button,
-			int mask, int first_val, int num_vals, int *valuators);
-
 /*****************************************************************************
  * Utility functions
  ****************************************************************************/
@@ -85,179 +82,6 @@ void set_absolute(InputInfoPtr pInfo, Bool absolute)
 		priv->flags |= ABSOLUTE_FLAG;
 	else
 		priv->flags &= ~ABSOLUTE_FLAG;
-}
-
-/*****************************************************************************
- * wcmSendButtons --
- *   Send button events by comparing the current button mask with the
- *   previous one.
- ****************************************************************************/
-
-static void wcmSendButtons(InputInfoPtr pInfo, const WacomDeviceState* ds, int buttons,
-			   int first_val, int num_vals, int *valuators)
-{
-	unsigned int button, mask, first_button;
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	DBG(6, priv, "buttons=%d\n", buttons);
-
-	first_button = 0; /* zero-indexed because of mask */
-
-	for (button = first_button; button < WCM_MAX_BUTTONS; button++)
-	{
-		mask = 1u << button;
-		if ((mask & priv->oldState.buttons) != (mask & buttons))
-			sendAButton(pInfo, ds, button, (mask & buttons),
-					first_val, num_vals, valuators);
-	}
-
-}
-
-void wcmEmitKeycode (DeviceIntPtr keydev, int keycode, int state)
-{
-	xf86PostKeyboardEvent (keydev, keycode, state);
-}
-
-/*****************************************************************************
- * countPresses
- *   Count the number of key/button presses not released for the given key
- *   array.
- ****************************************************************************/
-static int countPresses(int keybtn, unsigned int* keys, int size)
-{
-	int i, act, count = 0;
-
-	for (i = 0; i < size; i++)
-	{
-		act = keys[i];
-		if ((act & AC_CODE) == keybtn)
-			count += (act & AC_KEYBTNPRESS) ? 1 : -1;
-	}
-
-	return count;
-}
-
-static void sendAction(InputInfoPtr pInfo,  const WacomDeviceState* ds,
-		       int press, unsigned int *keys, int nkeys,
-		       int first_val, int num_val, int *valuators)
-{
-	int i;
-
-	/* Actions only trigger on press, not release */
-	for (i = 0; press && i < nkeys; i++)
-	{
-		unsigned int action = keys[i];
-
-		if (!action)
-			break;
-
-		switch ((action & AC_TYPE))
-		{
-			case AC_BUTTON:
-				{
-					int btn_no = (action & AC_CODE);
-					int is_press = (action & AC_KEYBTNPRESS);
-					if (btn_no != 1)
-						xf86PostButtonEventP(pInfo->dev,
-								    is_absolute(pInfo), btn_no,
-								    is_press, first_val, num_val,
-								    VCOPY(valuators, num_val));
-				}
-				break;
-			case AC_KEY:
-				{
-					int key_code = (action & AC_CODE);
-					int is_press = (action & AC_KEYBTNPRESS);
-					wcmEmitKeycode(pInfo->dev, key_code, is_press);
-				}
-				break;
-			case AC_MODETOGGLE:
-				if (press)
-					wcmDevSwitchModeCall(pInfo,
-							(is_absolute(pInfo)) ? Relative : Absolute); /* not a typo! */
-				break;
-		}
-	}
-
-	/* Release all non-released keys for this button. */
-	for (i = 0; !press && i < nkeys; i++)
-	{
-		unsigned int action = keys[i];
-
-		switch ((action & AC_TYPE))
-		{
-			case AC_BUTTON:
-				{
-					int btn_no = (action & AC_CODE);
-
-					/* don't care about releases here */
-					if (!(action & AC_KEYBTNPRESS))
-						break;
-
-					if (countPresses(btn_no, &keys[i], nkeys - i))
-						xf86PostButtonEventP(pInfo->dev,
-								is_absolute(pInfo), btn_no,
-								0, first_val, num_val,
-								VCOPY(valuators, num_val));
-				}
-				break;
-			case AC_KEY:
-				{
-					int key_code = (action & AC_CODE);
-
-					/* don't care about releases here */
-					if (!(action & AC_KEYBTNPRESS))
-						break;
-
-					if (countPresses(key_code, &keys[i], nkeys - i))
-						wcmEmitKeycode(pInfo->dev, key_code, 0);
-				}
-				break;
-		}
-	}
-}
-
-/*****************************************************************************
- * sendAButton --
- *   Send one button event, called by wcmSendButtons
- ****************************************************************************/
-static void sendAButton(InputInfoPtr pInfo, const WacomDeviceState* ds, int button,
-			int mask, int first_val, int num_val, int *valuators)
-{
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-
-	if (!priv->keys[button][0])
-		return;
-
-	sendAction(pInfo, ds, (mask != 0), priv->keys[button],
-		   ARRAY_SIZE(priv->keys[button]),
-		   first_val, num_val, valuators);
-}
-
-/**
- * Send button or actions for a scrolling axis.
- *
- * @param button     X button number to send if no action is defined
- * @param action     Action to send
- * @param nactions   Length of action array
- * @param pInfo
- * @param first_val  
- * @param num_vals
- * @param valuators
- */
-/*****************************************************************************
- * sendCommonEvents --
- *   Send events common between pad and stylus/cursor/eraser.
- ****************************************************************************/
-
-static void sendCommonEvents(InputInfoPtr pInfo, const WacomDeviceState* ds,
-			     int first_val, int num_vals, int *valuators)
-{
-	WacomDevicePtr priv = (WacomDevicePtr) pInfo->private;
-	int buttons = ds->buttons;
-
-	/* send button events when state changed or first time in prox and button unpresses */
-	if (priv->oldState.buttons != buttons || (!priv->oldState.proximity && !buttons))
-		wcmSendButtons(pInfo, ds, buttons, first_val, num_vals, valuators);
 }
 
 /* rotate x and y before post X inout events */
@@ -337,36 +161,11 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 	/* coordinates are ready we can send events */
 	if (ds->proximity)
 	{
-		/* Move the cursor to where it should be before sending button events */
-		if(!(priv->flags & BUTTONS_ONLY_FLAG) &&
-		   !(priv->oldState.buttons & 1))
-		{
-			xf86PostMotionEventP(pInfo->dev, is_absolute(pInfo),
-					     first_val, num_vals,
-					     VCOPY(valuators, num_vals));
-			/* For relative events, do not repost
-			 * the valuators.  Otherwise, a button
-			 * event in sendCommonEvents will move the
-			 * axes again.
-			 */
-			if (!is_absolute(pInfo))
-			{
-				first_val = 0;
-				num_vals = 0;
-			}
-		}
+		xf86PostMotionEventP(pInfo->dev, is_absolute(pInfo),
+				     first_val, num_vals,
+				     VCOPY(valuators, num_vals));
 
-		sendCommonEvents(pInfo, ds, first_val, num_vals, valuators);
 	}
-	else /* not in proximity */
-	{
-		int buttons = 0;
-
-		/* reports button up when the device has been
-		 * down and becomes out of proximity */
-		if (priv->oldState.buttons)
-			wcmSendButtons(pInfo, ds, buttons, first_val, num_vals, valuators);
-	} /* not in proximity */
 }
 
 /*****************************************************************************
@@ -376,9 +175,6 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 
 void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 {
-#ifdef DEBUG
-	int is_button = !!(ds->buttons);
-#endif
 	unsigned int serial = ds->serial_num;
 	int x = ds->x;
 	int y = ds->y;
@@ -403,11 +199,10 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 		y = priv->oldState.y;
 	}
 
-	DBG(7, priv, "[%s] o_prox=%s x=%d y=%d z=%d "
-		"b=%s b=%d\n",
+	DBG(7, priv, "[%s] o_prox=%s x=%d y=%d z=%d ",
 		pInfo->type_name,
 		priv->oldState.proximity ? "true" : "false",
-		x, y, z, is_button ? "true" : "false", ds->buttons);
+		x, y, z);
 
 
 	if (ds->proximity)
@@ -417,11 +212,10 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 
 	DBG(6, priv, "%s prox=%d\tx=%d"
 		"\ty=%d\tz=%d"
-		"\tserial=%u\tbutton=%s\tbuttons=%d\n",
+		"\tserial=%u\n",
 		is_absolute(pInfo) ? "abs" : "rel",
 		ds->proximity,
-		x, y, z, serial,
-		is_button ? "true" : "false", ds->buttons);
+		x, y, z, serial);
 
 	/* when entering prox, replace the zeroed-out oldState with a copy of
 	 * the current state to prevent jumps. reset the prox and button state
@@ -431,7 +225,6 @@ void wcmSendEvents(InputInfoPtr pInfo, const WacomDeviceState* ds)
 	{
 		wcmUpdateOldState(pInfo, ds, x, y);
 		priv->oldState.proximity = 0;
-		priv->oldState.buttons = 0;
 	}
 
 	valuators[0] = x;
@@ -480,8 +273,6 @@ wcmCheckSuppress(WacomCommonPtr common,
 
 	/* Never ignore proximity changes. */
 	if (dsOrig->proximity != dsNew->proximity) goto out;
-
-	if (dsOrig->buttons != dsNew->buttons) goto out;
 
 	/* FIXME: we should have different suppress values for different
 	 * axes with vastly different ranges.
@@ -571,12 +362,12 @@ void wcmEvent(WacomCommonPtr common, unsigned int channel,
 	ds = *pState;
 
 	DBG(10, common,
-		"c=%d s=%u x=%d y=%d b=%d "
+		"c=%d s=%u x=%d y=%d "
 		"p=%d "
 		"px=%d st=%d cs=%d \n",
 		channel,
 		ds.serial_num,
-		ds.x, ds.y, ds.buttons,
+		ds.x, ds.y,
 		ds.pressure,
 		ds.proximity, ds.sample,
 		pChannel->nSamples);
