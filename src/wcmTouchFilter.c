@@ -46,6 +46,7 @@
 #define WCM_SCROLL_RIGHT              7	/* horizontal right */
 
 static void wcmSendButtonClick(WacomDevicePtr priv, int button, int state);
+static void wcmTouchKey(WacomDevicePtr priv);
 static void wcmFingerScroll(WacomDevicePtr priv);
 static void wcmFingerZoom(WacomDevicePtr priv);
 
@@ -336,6 +337,34 @@ void wcmCancelGesture(InputInfoPtr pInfo)
 	common->wcmGestureMode = GESTURE_CANCEL_MODE;
 }
 
+static void wcmTouchKey(WacomDevicePtr priv)
+{
+	int i;
+	int keySize;
+	int nkeys = 4;
+	int keys[] = {135, 110, 166, 144}; /* XK_Menu, XK_Home, XK_Back, XK_Find */
+
+	WacomCommonPtr common = priv->common;
+	WacomDeviceState ds[2] = {}, dsLast[2] = {};
+
+	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
+	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
+
+	keySize = priv->maxX / nkeys;
+
+	priv->flags |= TOUCHKEY_FLAG;
+
+	for (i=0; i<nkeys; i++)
+	{
+		if (ds[0].x < keySize * (i + 1))
+		{
+			xf86PostKeyboardEvent (priv->pInfo->dev, keys[i], 1);
+			xf86PostKeyboardEvent (priv->pInfo->dev, keys[i], 0);
+			return;
+		}
+	}
+}
+
 /* parsing gesture mode according to 2FGT data */
 void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 {
@@ -347,6 +376,14 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 
 	DBG(10, priv, "\n");
 
+	if (priv->flags & TOUCHKEY_FLAG)
+	{
+		if(dsLast[0].proximity && !ds[0].proximity)
+			priv->flags &= ~TOUCHKEY_FLAG;
+
+		return;
+	}
+
 	/* Do not process gestures while in CANCEL mode. Only reset back to
 	 * NONE mode once all fingers have left the screen.
 	 */
@@ -356,6 +393,13 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 			return;
 		else
 			common->wcmGestureMode = GESTURE_NONE_MODE;
+	}
+
+	if (ds[0].proximity && !ds[1].proximity &&
+	    !dsLast[0].proximity && ds[0].y >= priv->bottomY+30)
+	{
+		wcmTouchKey(priv);
+		return;
 	}
 
 	if (common->wcmGestureMode == GESTURE_MULTITOUCH_MODE)
@@ -721,10 +765,10 @@ static void wcmFingerZoom(WacomDevicePtr priv)
 	common->wcmGestureParameters.wcmGestureUsed += count;
 	while (count--)
 	{
-		wcmEmitKeycode (priv->pInfo->dev, 37 /*XK_Control_L*/, 1);
+		xf86PostKeyboardEvent (priv->pInfo->dev, 37 /*XK_Control_L*/, 1);
 		wcmSendButtonClick (priv, button, 1);
 		wcmSendButtonClick (priv, button, 0);
-		wcmEmitKeycode (priv->pInfo->dev, 37 /*XK_Control_L*/, 0);
+		xf86PostKeyboardEvent (priv->pInfo->dev, 37 /*XK_Control_L*/, 0);
 	}
 }
 

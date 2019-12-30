@@ -159,7 +159,7 @@ wcmSendNonPadEvents(InputInfoPtr pInfo, const WacomDeviceState *ds,
 	}
 
 	/* coordinates are ready we can send events */
-	if (ds->proximity)
+	if (ds->proximity && !(priv->flags & TOUCHKEY_FLAG))
 	{
 		xf86PostMotionEventP(pInfo->dev, is_absolute(pInfo),
 				     first_val, num_vals,

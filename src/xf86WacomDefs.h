@@ -112,7 +112,7 @@ struct _WacomModel
  *****************************************************************************/
 
 #define ABSOLUTE_FLAG		0x00000100
-#define BAUD_19200_FLAG		0x00000400
+#define TOUCHKEY_FLAG		0x00000400
 #define BUTTONS_ONLY_FLAG	0x00000800
 
 #define IsUSBDevice(common) ((common)->wcmDevCls == &gWacomUSBDevice)
