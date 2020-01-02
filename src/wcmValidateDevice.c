@@ -652,6 +652,16 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 		priv->maxCurve = 2048;
 	}
 
+	s = xf86SetStrOption(pInfo->options, "TouchKeys", "0");
+	if (s)
+	{
+		/* No checking or error reporting for now */
+		wcmSetTouchKeys(priv, s);
+
+	}
+	free(s);
+
+
 	/*Serials of tools we want hotpluged*/
 	if (wcmParseSerials (pInfo) != 0)
 		goto error;

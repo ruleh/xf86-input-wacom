@@ -176,6 +176,9 @@ struct _WacomDeviceRec
 	unsigned keys[WCM_MAX_BUTTONS][256]; /* Action codes to perform when the associated event occurs */
 	Atom btn_actions[WCM_MAX_BUTTONS];   /* Action references so we can update the action codes when a client makes a change */
 
+	unsigned char touchkeys[256];
+	int ntouchkeys;         /* number of touchkeys for this subdevice */
+
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */
 				/* FIXME: always 6, and the code relies on that... */

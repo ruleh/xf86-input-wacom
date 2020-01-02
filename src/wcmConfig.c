@@ -120,6 +120,21 @@ static void wcmFree(InputInfoPtr pInfo)
 	pInfo->private = NULL;
 }
 
+int wcmSetTouchKeys(WacomDevicePtr priv, char *str)
+{
+	int b, i;
+
+	for (i = 0; *str != 0; i++)
+	{
+		sscanf(str,"%d%n", priv->touchkeys+i, &b);
+		b++;
+		str += b;
+	}
+	priv->ntouchkeys = i;
+
+	return i;
+}
+
 TEST_NON_STATIC int
 wcmSetType(InputInfoPtr pInfo, const char *type)
 {

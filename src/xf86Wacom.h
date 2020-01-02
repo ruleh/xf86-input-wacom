@@ -158,6 +158,9 @@ extern void wcmRotateAndScaleCoordinates(InputInfoPtr pInfo, int* x, int* y);
 extern int wcmCheckPressureCurveValues(int x0, int y0, int x1, int y1);
 extern int wcmGetPhyDeviceID(WacomDevicePtr priv);
 
+/* touchkeys */
+extern int wcmSetTouchKeys(WacomDevicePtr priv,  char *str);
+
 /* device properties */
 extern int wcmSetProperty(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop, BOOL checkonly);
 extern int wcmGetProperty(DeviceIntPtr dev, Atom property);

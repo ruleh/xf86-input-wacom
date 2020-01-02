@@ -341,25 +341,22 @@ static void wcmTouchKey(WacomDevicePtr priv)
 {
 	int i;
 	int keySize;
-	int nkeys = 4;
-	int keys[] = {135, 110, 166, 144}; /* XK_Menu, XK_Home, XK_Back, XK_Find */
-
 	WacomCommonPtr common = priv->common;
 	WacomDeviceState ds[2] = {}, dsLast[2] = {};
 
 	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
 	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
 
-	keySize = priv->maxX / nkeys;
+	keySize = priv->maxX / priv->ntouchkeys;
 
 	priv->flags |= TOUCHKEY_FLAG;
 
-	for (i=0; i<nkeys; i++)
+	for (i=0; i<priv->ntouchkeys; i++)
 	{
 		if (ds[0].x < keySize * (i + 1))
 		{
-			xf86PostKeyboardEvent (priv->pInfo->dev, keys[i], 1);
-			xf86PostKeyboardEvent (priv->pInfo->dev, keys[i], 0);
+			xf86PostKeyboardEvent (priv->pInfo->dev, priv->touchkeys[i], 1);
+			xf86PostKeyboardEvent (priv->pInfo->dev, priv->touchkeys[i], 0);
 			return;
 		}
 	}
