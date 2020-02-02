@@ -198,6 +198,5 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  man/Makefile
                  include/Makefile
-                 test/Makefile
                  xorg-wacom.pc])
 AC_OUTPUT
