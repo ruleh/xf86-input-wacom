@@ -652,7 +652,7 @@ Bool wcmPreInitParseOptions(InputInfoPtr pInfo, Bool is_primary,
 		priv->maxCurve = 2048;
 	}
 
-	s = xf86SetStrOption(pInfo->options, "TouchKeys", "0");
+	s = xf86SetStrOption(pInfo->options, "TouchKeys", "");
 	if (s)
 	{
 		/* No checking or error reporting for now */

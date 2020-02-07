@@ -126,8 +126,10 @@ int wcmSetTouchKeys(WacomDevicePtr priv, char *str)
 
 	for (i = 0; *str != 0; i++)
 	{
+		if (i != 0)
+			str++;
+
 		sscanf(str,"%d%n", priv->touchkeys+i, &b);
-		b++;
 		str += b;
 	}
 	priv->ntouchkeys = i;

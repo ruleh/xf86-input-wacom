@@ -347,6 +347,9 @@ static void wcmTouchKey(WacomDevicePtr priv)
 	getStateHistory(common, ds, ARRAY_SIZE(ds), 0);
 	getStateHistory(common, dsLast, ARRAY_SIZE(dsLast), 1);
 
+	if (priv->ntouchkeys == 0)
+		return;
+
 	keySize = priv->maxX / priv->ntouchkeys;
 
 	priv->flags |= TOUCHKEY_FLAG;
