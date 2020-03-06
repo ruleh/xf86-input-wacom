@@ -178,6 +178,7 @@ struct _WacomDeviceRec
 
 	unsigned char touchkeys[256];
 	int ntouchkeys;         /* number of touchkeys for this subdevice */
+	char activetouchkey;    /* currently pressed touchkey */
 
 	int nbuttons;           /* number of buttons for this subdevice */
 	int naxes;              /* number of axes */

@@ -350,6 +350,13 @@ static void wcmTouchKey(WacomDevicePtr priv)
 	if (priv->ntouchkeys == 0)
 		return;
 
+	if (priv->flags & TOUCHKEY_FLAG) {
+		priv->flags &= ~TOUCHKEY_FLAG;
+		xf86PostKeyboardEvent (priv->pInfo->dev, priv->activetouchkey, 0);
+		priv->activetouchkey = 0;
+		return;
+	}
+
 	keySize = priv->maxX / priv->ntouchkeys;
 
 	priv->flags |= TOUCHKEY_FLAG;
@@ -359,7 +366,7 @@ static void wcmTouchKey(WacomDevicePtr priv)
 		if (ds[0].x < keySize * (i + 1))
 		{
 			xf86PostKeyboardEvent (priv->pInfo->dev, priv->touchkeys[i], 1);
-			xf86PostKeyboardEvent (priv->pInfo->dev, priv->touchkeys[i], 0);
+			priv->activetouchkey = priv->touchkeys[i];
 			return;
 		}
 	}
@@ -379,7 +386,7 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 	if (priv->flags & TOUCHKEY_FLAG)
 	{
 		if(dsLast[0].proximity && !ds[0].proximity)
-			priv->flags &= ~TOUCHKEY_FLAG;
+			wcmTouchKey(priv);
 
 		return;
 	}

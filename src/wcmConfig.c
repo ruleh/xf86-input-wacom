@@ -89,6 +89,9 @@ static int wcmAllocate(InputInfoPtr pInfo)
 	priv->tap_timer = TimerSet(NULL, 0, 0, NULL, NULL);
 	priv->touch_timer = TimerSet(NULL, 0, 0, NULL, NULL);
 
+	/* touchkeys */
+	priv->activetouchkey = 0;
+
 	return 1;
 
 error:
