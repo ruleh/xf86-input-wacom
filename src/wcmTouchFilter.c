@@ -270,9 +270,6 @@ static CARD32 wcmSingleFingerTapTimer(OsTimerPtr timer, CARD32 time, pointer arg
 
 	if (common->wcmGestureMode == GESTURE_PREDRAG_MODE)
 	{
-		/* left button down */
-		wcmSendButtonClick(priv, 1, 1);
-
 		/* left button up */
 		wcmSendButtonClick(priv, 1, 0);
 		common->wcmGestureMode = GESTURE_NONE_MODE;
@@ -316,6 +313,9 @@ static void wcmSingleFingerTap(WacomDevicePtr priv)
 		    ds[1].sample < dsLast[0].sample)
 		{
 			common->wcmGestureMode = GESTURE_PREDRAG_MODE;
+
+			/* left button down */
+			wcmSendButtonClick(priv, 1, 1);
 
 			/* Delay to detect possible drag operation */
 			TimerSet(priv->tap_timer, 0, common->wcmGestureParameters.wcmTapTime, wcmSingleFingerTapTimer, priv);
@@ -479,8 +479,6 @@ void wcmGestureFilter(WacomDevicePtr priv, int touch_id)
 		 * switch to DRAG mode */
 		if (common->wcmGestureMode == GESTURE_PREDRAG_MODE)
 		{
-			/* left button down */
-			wcmSendButtonClick(priv, 1, 1);
 			common->wcmGestureMode = GESTURE_DRAG_MODE;
 			goto ret;
 		}
